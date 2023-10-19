@@ -15,7 +15,7 @@ const config: ForgeConfig = {
     appBundleId: 'com.electron.rp-app',
     name: 'rp-app',
     asar: true,
-    icon: '/src/assets/icons',
+    icon: '/src/assets/icons/icon',
     osxSign: {
       identity: 'Liu Song (7PZMT8T5KL)'
     }, // object must exist even if empty
@@ -23,6 +23,19 @@ const config: ForgeConfig = {
   hooks: { },
   rebuildConfig: {},
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config:{
+        authToken: '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',
+        repository: {
+          owner: 'liu-liubin',
+          name: 'rp-app'
+        },
+        prerelease: true
+      }
+    }
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
