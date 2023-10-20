@@ -27,7 +27,6 @@ const config: ForgeConfig = {
     {
       name: '@electron-forge/publisher-github',
       config:{
-        authToken: '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',
         repository: {
           owner: 'liu-liubin',
           name: 'rp-app'
@@ -46,7 +45,7 @@ const config: ForgeConfig = {
           {
             // html: './src/views/app/index.html',
             // js: './src/views/app/renderer.ts',
-            name: 'login_window',
+            name: 'main_app',
             preload: {
               js: './src/preload.ts',
             },

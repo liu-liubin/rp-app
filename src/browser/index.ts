@@ -25,7 +25,7 @@ class CommonBrowser extends BrowserWindow {
             show: false,
             titleBarStyle: 'customButtonsOnHover',
             webPreferences: {
-                preload: LOGIN_WINDOW_PRELOAD_WEBPACK_ENTRY
+                preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY
             }
         });
         this.moduleName = moduleName || WindowModule.Normal;
@@ -187,7 +187,7 @@ class CommonBrowser extends BrowserWindow {
         const viewWindow =  new BrowserView({
             webPreferences: {
                 nodeIntegration: true,
-                preload: LOGIN_WINDOW_PRELOAD_WEBPACK_ENTRY 
+                preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY 
             }
         });
 
