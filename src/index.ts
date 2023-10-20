@@ -69,7 +69,7 @@ const createIpcChannel = ()=>{
     WindowManager.getAllWindow().forEach(win=>win.close());
 
     WindowManager.create(WindowModule.Login);
-    WindowManager.getWindow(WindowModule.Login)?.view('http://localhost:3004');
+    WindowManager.getWindow(WindowModule.Login)?.view('http://192.168.0.101:3004');
   })
 
   // 获取渲染视图数
