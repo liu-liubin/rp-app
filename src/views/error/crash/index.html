@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/static/icon-font/iconfont.css">
+  <!-- <link rel="stylesheet" href="/static/icon-font/iconfont.css"> -->
   <style>
     html,
     body,
@@ -157,8 +157,7 @@
   </div>
   <div class="container">
     <div class="content" id="content">
-      <img class="content-img" src="./assets/crash@2x.png" srcset="./assets/crash.png, ./assets/crash@2x.png"
-        alt="404" />
+      <img class="content-img" src="~@/src/assets/images/crash@2x.png" />
       <p class="content-title" id="contentTitleID">
         抱歉，出现异常问题
       </p>
@@ -178,127 +177,6 @@
       </div>
     </div>
   </div>
-  <script src="./js/urlHelper.js"></script>
-  <script src="./js/drag.js"></script>
-  <script>
-
-    const UA = window.navigator.userAgent;
-    const isMac = UA.indexOf('Macintosh') !== -1;
-    const params = new URLSearchParams(location.search);
-    const isEn = params.get('isEn');
-    if(isEn === ""){
-      document.getElementById('contact').removeChild(document.getElementById('emptyID'));
-    }
-
-    const titleID = document.getElementById('titleID');
-    const titleOperateID = document.getElementById('titleOperateID');
-    const titleTextID = document.getElementById('titleTextID');
-    titleTextID.innerText = params.get('titleTextID');
-
-    const msgContentID = document.getElementById('msgContentID');
-    msgContentID.innerText = params.get('msgContentID');
-    
-    const msgLinkID = document.getElementById('msgLinkID');
-    msgLinkID.innerText = (" " + params.get('msgLinkID'));
-    if(isEn === "yes"){
-      msgLinkID.setAttribute("href","https://www.mockplus.com/support")
-    }
-    
-    const reloadID = document.getElementById('reloadID');
-    reloadID.innerText = params.get('reloadID');
-
-    const contentTitleID = document.getElementById('contentTitleID');
-    contentTitleID.innerText = params.get('contentTitleID');
-
-    const minimizeID = document.getElementById('minimizeID');
-    const maximizeID = document.getElementById('maximizeID');
-    const revertID = document.getElementById('revertID');
-    const closeID = document.getElementById('closeID');
-    const content = document.getElementById('content');
-
-    if (isMac) {
-      titleID.style.height = '24px';
-      content.style.marginTop = '24px';
-      titleOperateID.remove();
-    }
-
-    const redirect = params.get('redirect');
-    const isLoginWindow = redirect?.includes('/login');
-    // 登录页面不需要最大化和最小化
-    if(isLoginWindow) {
-      minimizeID.style.display = 'none';
-      maximizeID.style.display = 'none';
-      revertID.style.display = 'none';
-    }
-
-    const isMaximized = params.get('isMaximized');
-    if(isMaximized === 'true') {
-      doMaximize();
-    } else {
-      doUnMaximize();
-    }
-
-    reloadID.onclick = handleReloadPage;
-    minimizeID.onclick = () => {
-      ipcRenderer.send('window-minimize');
-    }
-    maximizeID.onclick = () => {
-      doMaximize();
-      ipcRenderer.send('window-maximize');
-    }
-    revertID.onclick = () => {
-      doUnMaximize();
-      ipcRenderer.send('window-unmaximize');
-    }
-    closeID.onclick = () => {
-      ipcRenderer.send('window-close');
-    }
-
-    let oldPosition = {
-      x: 0,
-      y: 0,
-    };
-    let moveStart = false;
-    // titleID.onmousedown = (e) => {
-    //   dragDelegate((e, delta) => {
-    //     const { x, y } = delta;
-    //     ipcRenderer.send('window-position', x, y);
-    //   }, () => { });
-    // }
-    titleID.ondblclick = () => {
-      if(isLoginWindow) {
-        return null;
-      }
-      if (maximizeID.style.display === 'none') {
-        doUnMaximize();
-        ipcRenderer.send('window-unmaximize');
-      } else {
-        doMaximize();
-        ipcRenderer.send('window-maximize');
-      }
-    }
-
-    ipcRenderer.addListener('maximize', doMaximize);
-
-    ipcRenderer.addListener('unmaximize', doUnMaximize);
-
-    function doMaximize() {
-      maximizeID.style.display = 'none';
-      revertID.style.display = 'flex';
-    }
-
-    function doUnMaximize() {
-      maximizeID.style.display = 'flex';
-      revertID.style.display = 'none';
-    }
-
-    function handleReloadPage() {
-      console.log('[reload] 刷新页面');
-      reloadID.innerText = params.get('refreshing');
-      ipcRenderer.send('window-crash-reload');
-    }
-    ipcRenderer.send('ready-to-show');
-  </script>
 </body>
 
 </html>

@@ -8,8 +8,11 @@ export enum ChannelTypes {
     Logout = 'logout',
     Close = 'close',
     CloseAll = 'closeAll',
+    Show = 'show',
+    ShowWindow = 'showWindow',
 
     SetWebStore = 'setWebStore',
+    ResetStore = 'resetStoreAndRelaunch',
 
     GetTabViews = 'on:getTabViews',
 

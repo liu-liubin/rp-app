@@ -3,6 +3,7 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 
@@ -15,14 +16,25 @@ const config: ForgeConfig = {
     appBundleId: 'com.electron.rp-app',
     name: 'rp-app',
     asar: true,
-    icon: '/src/assets/icons/icon',
+    icon: './src/assets/icons/icon',
     osxSign: {
       identity: 'Liu Song (7PZMT8T5KL)'
     }, // object must exist even if empty
   },
   hooks: { },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({
+      certificateFile: './cert/mockplus.pfx',
+      certificatePassword: "Jongde@61367719",
+    }), 
+    new MakerDMG({
+      icon: './src/assets/icons/icon.icns'
+    }),
+    new MakerZIP({  }, ['darwin', 'linux']), 
+    new MakerRpm({}), 
+    new MakerDeb({})
+  ],
   publishers: [
     {
       name: '@electron-forge/publisher-github',

@@ -20,9 +20,56 @@ jobs:
 
       - name: Publish Electron App
         run: npm run publish
+
+  build_on_mac_11:
+    runs-on: macos-11
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.0.0
+      
+      - name: Install Node
+        uses: actions/setup-node@v3.0.0
+
+      - name: Install dependencies
+        run: npm install 
+
+      - name: Publish Electron App
+        run: npm run publish
         
   build_on_window:
     runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: ver
+        uses: actions/checkout@v3.0.0
+      
+      - name: Install Node
+        uses: actions/setup-node@v3.0.0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Publish Electron App
+        run: npm run publish
+
+  build_on_win-2019:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout
+        uses: ver
+        uses: actions/checkout@v3.0.0
+      
+      - name: Install Node
+        uses: actions/setup-node@v3.0.0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Publish Electron App
+        run: npm run publish
+
+  build_on_ubuntu:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3.0.0

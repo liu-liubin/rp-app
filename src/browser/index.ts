@@ -1,5 +1,4 @@
 import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, shell } from 'electron';
-import {memoryCache} from '../store';
 import { BROWSER_DEFAULT_HEIGHT, BROWSER_DEFAULT_WIDTH, HOME_BROWSER_MIN_HEIGHT, HOME_BROWSER_MIN_WIDTH, isPrivate } from '../constants';
 import Logger from '../logger';
 import { ChannelTypes } from '../constants/enum';
@@ -80,8 +79,6 @@ class CommonBrowser extends BrowserWindow {
 
         this.createViewWindow(url);
         const viewWindow = this.viewMap.get(url) as BrowserView;
-        
-        this.addBrowserView(viewWindow);
 
         if( url.startsWith('http') ){
             viewWindow.webContents.loadURL(url);
@@ -93,17 +90,9 @@ class CommonBrowser extends BrowserWindow {
     initContentsEvent(viewWindow:BrowserView){
         const webContents = viewWindow.webContents;
         webContents.on('dom-ready', ()=>{
-            Logger.info('[CommonBrowser -> initContentsEvent] on:dom-ready');
+            Logger.info(`[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready`);
 
             this.viewMap.forEach(view=>view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys())));
-
-            const [width, height] = this.getSize();
-            viewWindow.setBounds({
-                x: 0,
-                y: 0,
-                width,
-                height
-            });
             // this.show();
         });
 
@@ -129,7 +118,7 @@ class CommonBrowser extends BrowserWindow {
 
         webContents.on('console-message', (e, level, ...args:unknown[])=>{
             if(level === 3){
-                Logger.info('[CommonBrowser -> initContentsEvent] console-message',webContents.getURL(), args);
+                Logger.info('[CommonBrowser -> initContentsEvent]',`【${this.moduleName}】console-message`,webContents.getURL(), args);
                 // if(webContents.getURL() !== HTML_ERROR_CRASH_WEBPACK_ENTRY){
                 //     this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY);
                 // }
@@ -140,13 +129,6 @@ class CommonBrowser extends BrowserWindow {
         // const defUserAgent = isMac ? MAC_OS_CHROME_USER_AGENT : WINDOW_CHROME_USER_AGENT;
         const userAgent = webContents.getUserAgent() //|| defUserAgent;
         webContents.setUserAgent(`${userAgent} mockRPD mockplusrp/${isPrivate?'ENT':'PUB'}`);
-
-        viewWindow.setAutoResize({
-            width: true,
-            height: true,
-            vertical: true,
-            horizontal: true,
-        });
 
         // 拦截window.open，并使用系统默认浏览器跳转
         webContents.setWindowOpenHandler(({ url, referrer }) => {
@@ -161,13 +143,15 @@ class CommonBrowser extends BrowserWindow {
     initBrowserEvent(){
         // BrowserView的内容加载不会触发该事件
         this.once('ready-to-show', ()=>{
-            Logger.warn('[CommonBrowser -> initBrowserEvent]', 'once:ready-to-show', this.moduleName);
-            this.show();
+            Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
+            if(this.moduleName !== WindowModule.Login){
+                this.show();
+            }
         })
 
         this.on('ready-to-show', ()=>{
             const [width, height] = this.getSize();
-            Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:ready-to-show', `width: ${width};height: ${height}`);
+            Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:ready-to-show', `width: ${width};height: ${height}`);
             this.moveTop();
         })
 
@@ -177,13 +161,15 @@ class CommonBrowser extends BrowserWindow {
 
         // 监听窗口关闭事件，接收到此事件时，需销毁对象引用关系；否则进程报错
         this.on('closed', ()=>{
-            Logger.warn('[CommonBrowser -> initBrowserEvent]', 'on:close', this.moduleName);
+            Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:close');
             WindowManager.removeWindow(this.moduleName);
+            this.loadingView = undefined;
+            this.viewMap.clear();
         })
     }
 
     private createViewWindow(url: string){
-        Logger.warn('[CommonBrowser -> createViewWindow]', `创建视图窗口: ${url}`);
+        Logger.warn('[CommonBrowser -> createViewWindow]', `【${this.moduleName}】创建视图窗口: ${url}`);
         const viewWindow =  new BrowserView({
             webPreferences: {
                 nodeIntegration: true,
@@ -192,9 +178,24 @@ class CommonBrowser extends BrowserWindow {
         });
 
         this.viewMap.set(url, viewWindow);
-        memoryCache.tabViews[this.moduleName] =  Array.from(this.viewMap.keys());
-
         this.initContentsEvent(viewWindow);
+        this.addBrowserView(viewWindow); 
+        this.setTopBrowserView(viewWindow); // 需先将win添加到browser中
+
+        viewWindow.setAutoResize({
+            width: true,
+            height: true,
+            vertical: true,
+            horizontal: true,
+        });
+
+        const [width, height] = this.getSize();
+        viewWindow.setBounds({
+            x: 0,
+            y: 0,
+            width,
+            height
+        });
     }
 }
 

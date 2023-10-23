@@ -9,12 +9,14 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+console.log(app.getAppPath())
+
 const startBrowserWindow = ()=>{
-  if(store.get('webStore')?.token){
-    ipcMain.emit(ChannelTypes.ToHome, Event, store.get('envConfig').domain);
-  }else{
+  // if(store.get('webStore')?.token){
+  //   ipcMain.emit(ChannelTypes.ToHome, Event, store.get('envConfig').domain);
+  // }else{
     ipcMain.emit(ChannelTypes.ToLogin);
-  }
+  // }
 }
  
 const createIpcChannel = ()=>{
@@ -50,8 +52,9 @@ const createIpcChannel = ()=>{
     Logger.info('[APP] ipcMain ToHome', '跳转到首页', url);
     WindowManager.create(WindowModule.Home);
     WindowManager.getWindow(WindowModule.Home)?.view(url);
-
+    // console.log(WindowManager.getWindow(WindowModule.Login))
     WindowManager.getWindow(WindowModule.Login)?.close();
+    
   });
 
   // 关闭当前窗口
@@ -69,7 +72,25 @@ const createIpcChannel = ()=>{
     WindowManager.getAllWindow().forEach(win=>win.close());
 
     WindowManager.create(WindowModule.Login);
-    WindowManager.getWindow(WindowModule.Login)?.view('http://192.168.0.101:3004');
+    WindowManager.getWindow(WindowModule.Login)?.view(store.get('envConfig').domain);
+  })
+
+  ipcMain.on(ChannelTypes.Show, (e, winName:WindowModule)=> {
+    const currWindow = WindowManager.getWindow(winName);
+    if (currWindow?.isVisible()){
+      return;
+    }
+    Logger.info('[APP] ipcMain Show', `显示当前渲染窗口: ${winName}`);
+    currWindow?.show();
+    currWindow?.moveTop();
+  })
+
+  // 清空缓存并重启
+  ipcMain.on(ChannelTypes.ResetStore, ()=>{
+    Logger.info('[APP] ipcMain ResetStore', '清空缓存并重新启动');
+    store.clear();
+    app.quit();
+    app.relaunch();
   })
 
   // 获取渲染视图数

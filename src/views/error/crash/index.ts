@@ -1,0 +1,1 @@
+import "../../../assets/images/crash.png";

@@ -17,12 +17,11 @@ export interface IStore {
   lang: string;
   browserOption?: Electron.BrowserWindowConstructorOptions;
   version?: string;  // 安装版本，如果版本更新，则此值在安装并启动应用时更新该值
-  origin?: string;
-  token?: string;
+  env: string;
   webStore: {
     [k:string]: unknown;
   };
-  envConfig: IApi;
+  envConfig: Partial<IApi>;
   //   env: any; // 当前环境 - 生产包仅读
   //   envConfig?: any, // 环境配置 - 生产包仅读
   //   envOrigin?:string; // 开发测试配置的地址 - 生产包无效
@@ -49,12 +48,13 @@ const store = new Store<IStore>({
         lang: 'zh_CN',
         browserOption: { },
         webStore: {},
+        env: 'dev',
         envConfig: {
-          domain: 'http://localhost:3008',
-          loginUrl: 'http://192.168.0.152:4004/plugin-signin/:code?type=rp',
-          signupUrl: 'http://192.168.0.152:4004/signup',
-          apiCC: `http://192.168.0.152:5006/api/v1`,
-          apiRP: `/rpapi/v1`,
+          domain: 'http://192.168.0.128:3004',
+          // loginUrl: 'http://192.168.0.152:4004/plugin-signin/:code?type=rp',
+          // signupUrl: 'http://192.168.0.152:4004/signup',
+          // apiCC: `http://192.168.0.152:5006/api/v1`,
+          // apiRP: `/rpapi/v1`,
         }
     },
 });
