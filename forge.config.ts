@@ -6,20 +6,6 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { MakerDMG } from '@electron-forge/maker-dmg';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
-// import electronInstaller from 'electron-winstaller';
-
-// try {
-//   electronInstaller.createWindowsInstaller({
-//     appDirectory: '/tmp/build/my-app-64',
-//     outputDirectory: '/tmp/build/installer64',
-//     authors: 'Mockplus Technology Co.,Ltd.',
-//     exe: 'myapp.exe'
-//   });
-//   console.log('It worked!');
-// } catch (e) {
-//   console.log(e);
-// }
-
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -46,10 +32,10 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       authors: 'Mockplus Technology Co.,Ltd.',
+      description: 'mockplus rp',
       certificateFile: './cert/mockplus.pfx',
       certificatePassword: "Jongde@61367719",
       setupIcon: './src/assets/icons/icon.ico',
-      loadingGif: './src/assets/images/loading.gif',
     }), 
     new MakerDMG({
       icon: './src/assets/icons/icon.icns'
