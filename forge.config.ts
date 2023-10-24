@@ -25,8 +25,11 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
+      authors: 'Mockplus Technology Co.,Ltd.',
       certificateFile: './cert/mockplus.pfx',
       certificatePassword: "Jongde@61367719",
+      setupIcon: './src/assets/icons/icon.ico',
+      loadingGif: './src/assets/images/loading.gif',
     }), 
     new MakerDMG({
       icon: './src/assets/icons/icon.icns'

@@ -6,20 +6,20 @@ on: # 监听 main 分支上的 push 事件
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
-  build_on_mac:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3.0.0
+  # build_on_mac:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3.0.0
       
-      - name: Install Node
-        uses: actions/setup-node@v3.0.0
+  #     - name: Install Node
+  #       uses: actions/setup-node@v3.0.0
 
-      - name: Install dependencies
-        run: npm install 
+  #     - name: Install dependencies
+  #       run: npm install 
 
-      - name: Publish Electron App
-        run: npm run publish
+  #     - name: Publish Electron App
+  #       run: npm run publish
   build_on_mac_11:
     runs-on: macos-11
     steps:
@@ -34,21 +34,21 @@ jobs:
 
       - name: Publish Electron App
         run: npm run publish
-  build_on_window:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        # uses: ver
-        uses: actions/checkout@v3.0.0
+  # build_on_window:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - name: Checkout
+  #       # uses: ver
+  #       uses: actions/checkout@v3.0.0
       
-      - name: Install Node
-        uses: actions/setup-node@v3.0.0
+  #     - name: Install Node
+  #       uses: actions/setup-node@v3.0.0
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Publish Electron App
-        run: npm run publish
+  #     - name: Publish Electron App
+  #       run: npm run publish
 
   # build_on_win-2019:
   #   runs-on: windows-2019
@@ -66,40 +66,19 @@ jobs:
   #     - name: Publish Electron App
   #       run: npm run publish
 
-  build_on_ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3.0.0
+  # build_on_ubuntu:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3.0.0
       
-      - name: Install Node
-        uses: actions/setup-node@v3.0.0
+  #     - name: Install Node
+  #       uses: actions/setup-node@v3.0.0
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Publish Electron App
-        run: npm run publish
+  #     - name: Publish Electron App
+  #       run: npm run publish
 
-  # release:
-  #   name: build and release electron app
-  #   runs-on:  ${{ matrix.os }}
-  # strategy:
-  #   fail-fast: false
-  #   matrix:
-  #     os: [windows-latest, macos-latest, ubuntu-latest]
-  # steps:
-  #   - name: Checkout  # 将代码拉到虚拟机
-  #     uses: actions/checkout@v3.0.0
-
-  #   - name: Install Node
-  #     uses: actions/setup-node@v2
-
-  #   - name: Install dependencies
-  #     run: npm install
-
-  #   - name: Publish Electron App
-  #     run: npm run publish
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         

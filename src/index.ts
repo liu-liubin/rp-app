@@ -1,4 +1,4 @@
-import { app, ipcMain, } from 'electron';
+import { app, ipcMain} from 'electron';
 import store from './store';
 import { ChannelTypes } from './constants/enum';
 import WindowManager, { WindowModule } from './browser';
