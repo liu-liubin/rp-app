@@ -1,7 +1,8 @@
 import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, shell } from 'electron';
-import { BROWSER_DEFAULT_HEIGHT, BROWSER_DEFAULT_WIDTH, HOME_BROWSER_MIN_HEIGHT, HOME_BROWSER_MIN_WIDTH, isPrivate } from '../constants';
+import { BROWSER_DEFAULT_HEIGHT, BROWSER_DEFAULT_WIDTH, HOME_BROWSER_MIN_HEIGHT, HOME_BROWSER_MIN_WIDTH, isPrivate, LOADING_WINDOW_HEIGHT, LOADING_WINDOW_WIDTH } from '../constants';
 import Logger from '../logger';
 import { ChannelTypes } from '../constants/enum';
+import store from '../store';
 
 export enum WindowModule {
     Normal = 'normal',
@@ -9,17 +10,21 @@ export enum WindowModule {
     Login = 'login',
     Editor = 'editor',
     Home = 'home',
-    Preview = 'preview'
+    Preview = 'preview',
+    Loading = 'loading'
 }
 
 class CommonBrowser extends BrowserWindow {
+    protected initEvent: {[k:string]: ()=>void;} = {};
     protected moduleName = WindowModule.Normal;
     protected viewMap = new Map<string, BrowserView>();
-    protected loadingView:BrowserView|undefined;
+    protected bounds: Electron.Rectangle;
 
     constructor(options?: Options, moduleName?:WindowModule){
+        
         super({
             ...options,
+            ...(store.get('windowBounds')[moduleName as string] || {}),
             frame: false,
             show: false,
             titleBarStyle: 'customButtonsOnHover',
@@ -27,29 +32,29 @@ class CommonBrowser extends BrowserWindow {
                 preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY
             }
         });
+
         this.moduleName = moduleName || WindowModule.Normal;
         process.env.moduleName = this.moduleName;
         this.initBrowserEvent();
-        this.loading();
+        this.bounds = this.getBounds();
     }
 
-    loading(){
-        Logger.info('[CommonBrowser -> loading]', this.loadingView);
-        if(this.loadingView){
-            this.setTopBrowserView(this.loadingView);
-            return;
-        }
-        this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
-        this.loadingView = new BrowserView();
-        this.loadingView.setAutoResize({
-            width: true,
-            height: true,
-            vertical: true,
-            horizontal: true,
-        });
-        this.addBrowserView(this.loadingView);
-        this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
-    }
+    // loading(){
+    //     Logger.info('[CommonBrowser -> loading]', this.loadingView, `窗口是否显示：${this.isVisible()}`);
+    //     if(this.loadingView){
+    //         this.setTopBrowserView(this.loadingView);
+    //         return;
+    //     }
+    //     this.loadingView = new BrowserView();
+    //     this.loadingView.setAutoResize({
+    //         width: true,
+    //         height: true,
+    //         vertical: true,
+    //         horizontal: true,
+    //     });
+    //     this.addBrowserView(this.loadingView);
+    //     this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+    // }
 
     load(url?: string){
         Logger.info('[CommonBrowser -> load]', url);
@@ -68,8 +73,6 @@ class CommonBrowser extends BrowserWindow {
         if (!url){
             return;
         }
-
-        this.loading();
 
         if(this.viewMap.has(url)){
             this.setTopBrowserView(this.viewMap.get(url) as BrowserView);
@@ -93,7 +96,9 @@ class CommonBrowser extends BrowserWindow {
             Logger.info(`[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready`);
 
             this.viewMap.forEach(view=>view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys())));
-            // this.show();
+            if(this.moduleName !== WindowModule.Login){
+                this.show();
+            }
         });
 
         webContents.on('before-input-event', (event, input) => {
@@ -141,35 +146,54 @@ class CommonBrowser extends BrowserWindow {
     }
 
     initBrowserEvent(){
-        // BrowserView的内容加载不会触发该事件
+        // BrowserView的内容加载不会触发该事件， browserWindow.load时触发该事件
         this.once('ready-to-show', ()=>{
             Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
             if(this.moduleName !== WindowModule.Login){
                 this.show();
             }
         })
-
+        // BrowserView的内容加载不会触发该事件， browserWindow.load时触发该事件
         this.on('ready-to-show', ()=>{
+            WindowManager.loadingWindow?.hide();
             const [width, height] = this.getSize();
             Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:ready-to-show', `width: ${width};height: ${height}`);
             this.moveTop();
+            this.initEvent['ready-to-show']?.();
         })
 
         this.on('resize', ()=>{
-            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on resize');
+            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
+            this.bounds = this.getBounds();
+        })
+
+        this.on('move', ()=>{
+            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
+            this.bounds = this.getBounds();
+        })
+
+        this.on('show', ()=>{
+            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:show');
         })
 
         // 监听窗口关闭事件，接收到此事件时，需销毁对象引用关系；否则进程报错
         this.on('closed', ()=>{
             Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:close');
+            this.initEvent['closed']?.();
             WindowManager.removeWindow(this.moduleName);
-            this.loadingView = undefined;
             this.viewMap.clear();
+            
+            this.moduleName !== WindowModule.Login && store.set('windowBounds', {
+                ...store.get('windowBounds'),
+                [this.moduleName]: this.bounds
+            });
         })
     }
 
     private createViewWindow(url: string){
         Logger.warn('[CommonBrowser -> createViewWindow]', `【${this.moduleName}】创建视图窗口: ${url}`);
+        WindowManager.loadingWindow?.show();
+
         const viewWindow =  new BrowserView({
             webPreferences: {
                 nodeIntegration: true,
@@ -211,6 +235,8 @@ class LoginBrowser extends CommonBrowser{
             fullscreenable: false,
             ...options
         }, WindowModule.Login);
+
+        this.initEvent = {}
     }
 }
 
@@ -237,6 +263,17 @@ class EditorBrowser extends CommonBrowser{
             minHeight: HOME_BROWSER_MIN_HEIGHT,
             ...options
         }, WindowModule.Editor);
+
+        this.initEvent = this.getEvent();
+    }
+    
+    getEvent(){
+        return {
+            ['closed']: ()=>{
+                Logger.warn('[EditorBrowser -> getEvent]', `【${this.moduleName}】`, 'on:closed');
+                WindowManager.getWindow(WindowModule.Home)?.moveTop(); 
+            }
+        }
     }
 }
 
@@ -259,14 +296,43 @@ class PreviewBrowser extends CommonBrowser{
     }
 }
 
+class LoadingBrowser extends CommonBrowser{
+    constructor(options: Options = {}){
+        super({
+            width: LOADING_WINDOW_WIDTH,
+            height: LOADING_WINDOW_HEIGHT,
+            minWidth: LOADING_WINDOW_WIDTH,
+            minHeight: LOADING_WINDOW_HEIGHT,
+            transparent: true,
+            alwaysOnTop: true,
+            ...options
+        }, WindowModule.Loading);
+
+        this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+
+        this.initEvent = this.getEvent();
+    }
+    
+    getEvent(){
+        return {
+        }
+    }
+}
+
 class WindowManager {
     private static windowMap = new Map<WindowModule, CommonBrowser>();
-    private static windowIDS = new Map<string, number>();
+    public static loadingWindow:BrowserWindow|undefined = undefined;
 
     static create(module:WindowModule, options: Options = {}){
+        Logger.warn('[WindowManager -> create]', `【${module}】`, `窗口是否存在：${this.windowMap.has(module)}`);
         if (this.windowMap.has(module)){
             this.windowMap.get(module)?.show();
             return;
+        }
+        if(!this.loadingWindow){
+            this.loadingWindow = new LoadingBrowser({
+                trafficLightPosition: { x: -10, y: -10 }
+            });
         }
         if( module === WindowModule.Login ){
             const loginWindow = new LoginBrowser(options);
@@ -299,6 +365,14 @@ class WindowManager {
 
     static getShowWindow(): BrowserWindow[]{
         return Array.from(this.windowMap.values()).filter(win=>win.isVisible());
+    }
+
+    static closeAllWindow():void {
+        this.getAllWindow().forEach(item=>item.close());
+    }
+
+    static hideAllWindow():void {
+        this.getAllWindow().forEach(item=>item.hide());
     }
 
     // static window(name:Views, flag=''): (options?:Options)=> BrowserWindow {

@@ -22,6 +22,7 @@ export interface IStore {
     [k:string]: unknown;
   };
   envConfig: Partial<IApi>;
+  windowBounds:{[k:string]:Electron.Rectangle};
   //   env: any; // 当前环境 - 生产包仅读
   //   envConfig?: any, // 环境配置 - 生产包仅读
   //   envOrigin?:string; // 开发测试配置的地址 - 生产包无效
@@ -55,7 +56,8 @@ const store = new Store<IStore>({
           // signupUrl: 'http://192.168.0.152:4004/signup',
           // apiCC: `http://192.168.0.152:5006/api/v1`,
           // apiRP: `/rpapi/v1`,
-        }
+        },
+        windowBounds: {}
     },
 });
 

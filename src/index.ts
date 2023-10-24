@@ -12,11 +12,7 @@ if (require('electron-squirrel-startup')) {
 console.log(app.getAppPath())
 
 const startBrowserWindow = ()=>{
-  // if(store.get('webStore')?.token){
-  //   ipcMain.emit(ChannelTypes.ToHome, Event, store.get('envConfig').domain);
-  // }else{
-    ipcMain.emit(ChannelTypes.ToLogin);
-  // }
+  ipcMain.emit(ChannelTypes.ToLogin);
 }
  
 const createIpcChannel = ()=>{
@@ -28,6 +24,7 @@ const createIpcChannel = ()=>{
 
   // 跳转到RP编辑器界面
   ipcMain.on(ChannelTypes.ToEditor, (e, url: string)=>{
+    WindowManager.hideAllWindow();
     WindowManager.create(WindowModule.Editor);
     WindowManager.getWindow(WindowModule.Editor)?.view(url);
   });
@@ -45,7 +42,7 @@ const createIpcChannel = ()=>{
     webStore.token = undefined;
     store.set('webStore', webStore);
     ipcMain.emit(ChannelTypes.ToLogin, Event);
-  })
+  });
 
   // 跳转到项目首页
   ipcMain.on(ChannelTypes.ToHome, (e, url?:string)=>{
@@ -76,11 +73,11 @@ const createIpcChannel = ()=>{
   })
 
   ipcMain.on(ChannelTypes.Show, (e, winName:WindowModule)=> {
+    Logger.info('[APP] ipcMain Show', `显示当前渲染窗口: ${winName}`);
     const currWindow = WindowManager.getWindow(winName);
     if (currWindow?.isVisible()){
       return;
     }
-    Logger.info('[APP] ipcMain Show', `显示当前渲染窗口: ${winName}`);
     currWindow?.show();
     currWindow?.moveTop();
   })
@@ -128,7 +125,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   Logger.info('[APP] on activate', `当前窗口实例个数：${WindowManager.getAllWindow().length}`);
-  if(WindowManager.getShowWindow().length === 0){
+  if(WindowManager.getAllWindow().length === 0){
     startBrowserWindow();
   }
 });
@@ -137,7 +134,3 @@ app.on('quit', ()=>{
   // BrowserWindow.getAllWindows().forEach(w=> w.destroy());
   Logger.info('[APP] on quit', '收到应用程序退出的事件');
 })
-
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
