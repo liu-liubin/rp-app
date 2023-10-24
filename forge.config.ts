@@ -9,7 +9,7 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import electronInstaller from 'electron-winstaller';
 
 try {
-  await electronInstaller.createWindowsInstaller({
+  electronInstaller.createWindowsInstaller({
     appDirectory: '/tmp/build/my-app-64',
     outputDirectory: '/tmp/build/installer64',
     authors: 'Mockplus Technology Co.,Ltd.',
@@ -17,7 +17,7 @@ try {
   });
   console.log('It worked!');
 } catch (e) {
-  console.log(`No dice: ${e.message}`);
+  console.log(e);
 }
 
 
@@ -34,12 +34,12 @@ const config: ForgeConfig = {
     osxSign: {
       identity: 'Liu Song (7PZMT8T5KL)'
     }, // object must exist even if empty
-    osxNotarize: {
-      tool: 'notarytool',
-      appleId: 'jongde.com@gmail.com',
-      appleIdPassword: 'rggl-xqaj-dpti-xzwa',
-      teamId: 'Liu Song (7PZMT8T5KL)'
-    }
+    // osxNotarize: {
+    //   tool: 'notarytool',
+    //   appleId: 'jongde.com@gmail.com',
+    //   appleIdPassword: 'rggl-xqaj-dpti-xzwa',
+    //   teamId: 'Liu Song (7PZMT8T5KL)'
+    // }
   },
   hooks: { },
   rebuildConfig: {},
