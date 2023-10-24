@@ -6,19 +6,19 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { MakerDMG } from '@electron-forge/maker-dmg';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
-import electronInstaller from 'electron-winstaller';
+// import electronInstaller from 'electron-winstaller';
 
-try {
-  electronInstaller.createWindowsInstaller({
-    appDirectory: '/tmp/build/my-app-64',
-    outputDirectory: '/tmp/build/installer64',
-    authors: 'Mockplus Technology Co.,Ltd.',
-    exe: 'myapp.exe'
-  });
-  console.log('It worked!');
-} catch (e) {
-  console.log(e);
-}
+// try {
+//   electronInstaller.createWindowsInstaller({
+//     appDirectory: '/tmp/build/my-app-64',
+//     outputDirectory: '/tmp/build/installer64',
+//     authors: 'Mockplus Technology Co.,Ltd.',
+//     exe: 'myapp.exe'
+//   });
+//   console.log('It worked!');
+// } catch (e) {
+//   console.log(e);
+// }
 
 
 import { mainConfig } from './webpack.main.config';
