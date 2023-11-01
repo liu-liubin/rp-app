@@ -6,6 +6,7 @@ import Store from 'electron-store';
 // import mockplus from '../mockplus';
 
 interface IApi {
+  home: string;
   domain: string;
   loginUrl: string;
   signupUrl: string;
@@ -18,11 +19,12 @@ export interface IStore {
   browserOption?: Electron.BrowserWindowConstructorOptions;
   version?: string;  // 安装版本，如果版本更新，则此值在安装并启动应用时更新该值
   env: string;
+  debug: boolean;
   webStore: {
     [k:string]: unknown;
   };
   envConfig: Partial<IApi>;
-  windowBounds:{[k:string]:Electron.Rectangle};
+  windowBounds:{[k:string]:Partial<Electron.Rectangle> |undefined};
   //   env: any; // 当前环境 - 生产包仅读
   //   envConfig?: any, // 环境配置 - 生产包仅读
   //   envOrigin?:string; // 开发测试配置的地址 - 生产包无效
@@ -42,6 +44,9 @@ export interface IMemoryCache{
   tabViews: {
     [k:string]: string[]
   };
+  windowMode: {
+    [k: string]: 'minimize'|'maximize'|'fullscreen'|'normal'
+  };
 }
 
 const store = new Store<IStore>({
@@ -50,19 +55,17 @@ const store = new Store<IStore>({
         browserOption: { },
         webStore: {},
         env: 'dev',
+        debug: true,
         envConfig: {
-          domain: 'http://192.168.0.128:3004',
-          // loginUrl: 'http://192.168.0.152:4004/plugin-signin/:code?type=rp',
-          // signupUrl: 'http://192.168.0.152:4004/signup',
-          // apiCC: `http://192.168.0.152:5006/api/v1`,
-          // apiRP: `/rpapi/v1`,
+          // domain: 'http://192.168.0.81:3004',
         },
         windowBounds: {}
     },
 });
 
 export const memoryCache:IMemoryCache = {
-  tabViews: {}
+  tabViews: {},
+  windowMode: {},
 };
 
 export default store;

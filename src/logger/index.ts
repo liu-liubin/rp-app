@@ -10,7 +10,7 @@ class Logger {
   static error(...params: Array<string|number>): void {
     error(...params);
   }
-  static warn(...params: Array<string|number>): void {
+  static warn(...params: Array<unknown>): void {
     warn(...params);
   }
   static debug(...params: Array<string|number>): void {

@@ -1,4 +1,4 @@
-export const isPrivate = true;
+export const isPrivate = false;
 
 export const HOME_BROWSER_MIN_WIDTH = 500;
 export const HOME_BROWSER_MIN_HEIGHT = 350;
@@ -8,3 +8,8 @@ export const BROWSER_DEFAULT_HEIGHT = 750;
 
 export const LOADING_WINDOW_WIDTH = 96;
 export const LOADING_WINDOW_HEIGHT = 96;
+
+export const MAC_OS_CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
+export const WINDOW_CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
+
+export const PROGRAM_AUTHOR = 'Mockplus Technology Co.,Ltd.';

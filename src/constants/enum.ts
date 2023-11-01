@@ -1,4 +1,7 @@
 export enum ChannelTypes {
+    /** 程序启动 */
+    Startup = 'startup',
+
     Token = 'token',
     ToPreview = 'toPreview',
     ToEditor = 'toEditor', // 
@@ -10,16 +13,29 @@ export enum ChannelTypes {
     CloseAll = 'closeAll',
     Show = 'show',
     ShowWindow = 'showWindow',
+    ShowLoading = 'showLoading',
+    CloseLoading = 'closeLoading',
 
     SetWebStore = 'setWebStore',
     ResetStore = 'resetStoreAndRelaunch',
 
-    GetTabViews = 'on:getTabViews',
-
     CreateProject = 'createProject',
-    Init = 'init',
+
+    Maximize = 'maximize',
+    Minimize = 'minimize',
+    Fullscreen = 'fullscreen',
+    Restore = 'restore',
+
+    ShowAbout = 'showAbout',
 
     Size = 'size',
+
+    InvokeSubscribe = 'emitSubscribe',
+    CapturePage = 'capturePage',
+    ConsoleLogger = 'consoleLogger',
+
+    GetTabViews = 'on:getTabViews',
+    UpdateWindowMode = 'on:updateWindowMode',
 }
 
 export enum MainChannelTypes{

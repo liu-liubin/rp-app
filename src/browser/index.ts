@@ -1,400 +1,724 @@
-import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, shell } from 'electron';
-import { BROWSER_DEFAULT_HEIGHT, BROWSER_DEFAULT_WIDTH, HOME_BROWSER_MIN_HEIGHT, HOME_BROWSER_MIN_WIDTH, isPrivate, LOADING_WINDOW_HEIGHT, LOADING_WINDOW_WIDTH } from '../constants';
+import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, app, shell } from 'electron';
+import {
+  BROWSER_DEFAULT_HEIGHT,
+  BROWSER_DEFAULT_WIDTH,
+  HOME_BROWSER_MIN_HEIGHT,
+  HOME_BROWSER_MIN_WIDTH,
+  isPrivate,
+  LOADING_WINDOW_HEIGHT,
+  LOADING_WINDOW_WIDTH,
+  MAC_OS_CHROME_USER_AGENT,
+  WINDOW_CHROME_USER_AGENT,
+} from '../constants';
 import Logger from '../logger';
 import { ChannelTypes } from '../constants/enum';
 import store from '../store';
 
 export enum WindowModule {
-    Normal = 'normal',
-    App = 'app',
-    Login = 'login',
-    Editor = 'editor',
-    Home = 'home',
-    Preview = 'preview',
-    Loading = 'loading'
+  Normal = 'normal',
+  App = 'app',
+  Login = 'login',
+  Editor = 'editor',
+  Home = 'home',
+  Preview = 'preview',
+  Loading = 'loading',
 }
+
+export enum BrowserWindowEvent {
+  ReadyToShow = 'ready-to-show'
+}
+
+const MAIN_TAG_NAME = '__main__';
 
 class CommonBrowser extends BrowserWindow {
-    protected initEvent: {[k:string]: ()=>void;} = {};
-    protected moduleName = WindowModule.Normal;
-    protected viewMap = new Map<string, BrowserView>();
-    protected bounds: Electron.Rectangle;
+  protected initEvent: { [k: string]: () => void } = {};
+  protected viewMap = new Map<string, BrowserView>();
+  protected bounds: Electron.Rectangle;
 
-    constructor(options?: Options, moduleName?:WindowModule){
-        
-        super({
-            ...options,
-            ...(store.get('windowBounds')[moduleName as string] || {}),
-            frame: false,
-            show: false,
-            titleBarStyle: 'customButtonsOnHover',
-            webPreferences: {
-                preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY
-            }
-        });
+  public moduleName: WindowModule = WindowModule.Normal;
+  public tag = MAIN_TAG_NAME;
+  public url = '';
+  /** view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
+  public isLoaded = false;
 
-        this.moduleName = moduleName || WindowModule.Normal;
-        process.env.moduleName = this.moduleName;
-        this.initBrowserEvent();
-        this.bounds = this.getBounds();
+  protected modalLoadingWindow: BrowserWindow;
+
+  constructor(options: Options = {}) {
+    super({
+      ...options,
+      frame: false,
+      show: false,
+      titleBarStyle: 'customButtonsOnHover',
+      webPreferences: {
+        ...(options.webPreferences || {}),
+        nodeIntegration: true,
+        preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
+      },
+    });
+
+    this.modalLoadingWindow = new LoadingBrowser({
+      parent: this,
+      show: false,
+    });
+
+    process.env.windowId = `${this.id}`;
+    this.initBrowserEvent();
+    this.initContentsEvent(this);
+    this.bounds = this.getBounds();
+  }
+
+  // loading(){
+  //     Logger.info('[CommonBrowser -> loading]', this.loadingView, `窗口是否显示：${this.isVisible()}`);
+  //     if(this.loadingView){
+  //         this.setTopBrowserView(this.loadingView);
+  //         return;
+  //     }
+  //     this.loadingView = new BrowserView();
+  //     this.loadingView.setAutoResize({
+  //         width: true,
+  //         height: true,
+  //         vertical: true,
+  //         horizontal: true,
+  //     });
+  //     this.addBrowserView(this.loadingView);
+  //     this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+  // }
+
+  load(url?: string) {
+    Logger.info('[CommonBrowser -> load]', url);
+    if (!url) {
+      return;
+    }
+    if (url.startsWith('http:')|| url.startsWith('file:')) {
+      this.webContents.loadURL(url);
+    } else {
+      this.webContents.loadFile(url);
+    }
+  }
+
+  view(url: string, { referrer }: Partial<LoadContentOptions> = {}) {
+    if(this.isLoaded){
+      return;
+    }
+    this.url = url;
+    const [urlSite, urlSearch = ''] = url.split('?');
+
+    const query: { [k: string]: string } = {};
+    for (const [key, value] of new URLSearchParams(urlSearch).entries()) {
+      query[key] = encodeURIComponent(value);
+    }
+    if(referrer){
+      query['rp_referrer'] = encodeURIComponent(referrer);
     }
 
-    // loading(){
-    //     Logger.info('[CommonBrowser -> loading]', this.loadingView, `窗口是否显示：${this.isVisible()}`);
-    //     if(this.loadingView){
-    //         this.setTopBrowserView(this.loadingView);
-    //         return;
-    //     }
-    //     this.loadingView = new BrowserView();
-    //     this.loadingView.setAutoResize({
-    //         width: true,
-    //         height: true,
-    //         vertical: true,
-    //         horizontal: true,
-    //     });
-    //     this.addBrowserView(this.loadingView);
-    //     this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
-    // }
+    const newQuery = Object.entries(query).map( ([k ,v])=> `${k}=${v}` ).join('&');
+    const newUrl = [urlSite].concat(newQuery?[newQuery]:[]).join('?');
+    Logger.info('[CommonBrowser -> view]', `【${this.moduleName}】`, this.webContents.getURL(), newUrl, newQuery);
 
-    load(url?: string){
-        Logger.info('[CommonBrowser -> load]', url);
-        if(!url){
-            return;
-        }
-        if( url.startsWith('http') ){
-            this.webContents.loadURL(url);
-        }else{
-            this.webContents.loadFile(url);
-        }
+    if(this.webContents.getURL() === newUrl){
+      return;
     }
 
-    view(url?: string){
-        Logger.info('[CommonBrowser -> view]', url);
-        if (!url){
-            return;
-        }
+    if (newUrl.startsWith('http:') || newUrl.startsWith('file:')) {
+      this.webContents.loadURL(newUrl, {
+        httpReferrer: url,
+      });
+    } else {
+      this.webContents.loadFile(newUrl);
+    }
+    this.isLoaded = true;
+  }
 
-        if(this.viewMap.has(url)){
-            this.setTopBrowserView(this.viewMap.get(url) as BrowserView);
-            // this.setBrowserView(this.viewMap.get(url) as BrowserView);
-            return;
-        }
-
-        this.createViewWindow(url);
-        const viewWindow = this.viewMap.get(url) as BrowserView;
-
-        if( url.startsWith('http') ){
-            viewWindow.webContents.loadURL(url);
-        }else{
-            viewWindow.webContents.loadFile(url);
-        }
+  tabView(url?: string, { referrer }: Partial<LoadContentOptions> = {}) {
+    if (!url) {
+      Logger.info('[CommonBrowser -> tabView]', 'url为空, 无法加载');
+      return;
     }
 
-    initContentsEvent(viewWindow:BrowserView){
-        const webContents = viewWindow.webContents;
-        webContents.on('dom-ready', ()=>{
-            Logger.info(`[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready`);
+    const [urlSite, urlSearch = ''] = url.split('?');
 
-            this.viewMap.forEach(view=>view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys())));
-            if(this.moduleName !== WindowModule.Login){
-                this.show();
-            }
-        });
+    const newQuery = referrer ? `rp_referrer=${encodeURIComponent(referrer)}&` : '' + `${urlSearch}`;
+    const newUrl = [urlSite].concat(newQuery ? [newQuery] : []).join('?');
 
-        webContents.on('before-input-event', (event, input) => {
-            if(input.key.toLocaleLowerCase() === 'f12'){
-                if(!webContents.isDevToolsOpened()) {
-                    webContents.openDevTools();
-                }else{
-                    webContents.closeDevTools();
-                }
-                event.preventDefault();
-            }
-        });
+    let viewWindow = this.viewMap.get(newUrl);
 
-        webContents.on('did-fail-load', (e, ...args:unknown[])=>{
-            const [,,url] = args;
-            Logger.info('[CommonBrowser -> initContentsEvent] did-fail-load', args);
-            if(HTML_ERROR_CRASH_WEBPACK_ENTRY === url){
-                return;
-            }
-            this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY);
-        })
+    Logger.info('[CommonBrowser -> view]', newUrl, { referrer }, `视图窗口是否存在：${!!viewWindow}`);
 
-        webContents.on('console-message', (e, level, ...args:unknown[])=>{
-            if(level === 3){
-                Logger.info('[CommonBrowser -> initContentsEvent]',`【${this.moduleName}】console-message`,webContents.getURL(), args);
-                // if(webContents.getURL() !== HTML_ERROR_CRASH_WEBPACK_ENTRY){
-                //     this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY);
-                // }
-            }
-
-        })
-
-        // const defUserAgent = isMac ? MAC_OS_CHROME_USER_AGENT : WINDOW_CHROME_USER_AGENT;
-        const userAgent = webContents.getUserAgent() //|| defUserAgent;
-        webContents.setUserAgent(`${userAgent} mockRPD mockplusrp/${isPrivate?'ENT':'PUB'}`);
-
-        // 拦截window.open，并使用系统默认浏览器跳转
-        webContents.setWindowOpenHandler(({ url, referrer }) => {
-            Logger.info('[CommonBrowser -> initContentsEvent] setWindowOpenHandler', url, referrer);
-            shell.openExternal(url).catch(()=>{
-                Logger.info('[CommonBrowser -> initContentsEvent] setWindowOpenHandler', url, '打开失败');
-            });
-            return { action: 'deny' } //{ action: 'deny' }
-        })
+    if (viewWindow) {
+      this.setTopBrowserView(viewWindow as BrowserView);
+    } else {
+      this.createViewWindow(newUrl);
+      viewWindow = this.viewMap.get(newUrl) as BrowserView;
     }
-
-    initBrowserEvent(){
-        // BrowserView的内容加载不会触发该事件， browserWindow.load时触发该事件
-        this.once('ready-to-show', ()=>{
-            Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
-            if(this.moduleName !== WindowModule.Login){
-                this.show();
-            }
-        })
-        // BrowserView的内容加载不会触发该事件， browserWindow.load时触发该事件
-        this.on('ready-to-show', ()=>{
-            WindowManager.loadingWindow?.hide();
-            const [width, height] = this.getSize();
-            Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:ready-to-show', `width: ${width};height: ${height}`);
-            this.moveTop();
-            this.initEvent['ready-to-show']?.();
-        })
-
-        this.on('resize', ()=>{
-            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
-            this.bounds = this.getBounds();
-        })
-
-        this.on('move', ()=>{
-            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
-            this.bounds = this.getBounds();
-        })
-
-        this.on('show', ()=>{
-            // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:show');
-        })
-
-        // 监听窗口关闭事件，接收到此事件时，需销毁对象引用关系；否则进程报错
-        this.on('closed', ()=>{
-            Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:close');
-            this.initEvent['closed']?.();
-            WindowManager.removeWindow(this.moduleName);
-            this.viewMap.clear();
-            
-            this.moduleName !== WindowModule.Login && store.set('windowBounds', {
-                ...store.get('windowBounds'),
-                [this.moduleName]: this.bounds
-            });
-        })
+    if (newUrl.startsWith('http')) {
+      viewWindow.webContents.loadURL(newUrl);
+    } else {
+      viewWindow.webContents.loadFile(newUrl);
     }
+  }
 
-    private createViewWindow(url: string){
-        Logger.warn('[CommonBrowser -> createViewWindow]', `【${this.moduleName}】创建视图窗口: ${url}`);
-        WindowManager.loadingWindow?.show();
-
-        const viewWindow =  new BrowserView({
-            webPreferences: {
-                nodeIntegration: true,
-                preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY 
-            }
-        });
-
-        this.viewMap.set(url, viewWindow);
-        this.initContentsEvent(viewWindow);
-        this.addBrowserView(viewWindow); 
-        this.setTopBrowserView(viewWindow); // 需先将win添加到browser中
-
-        viewWindow.setAutoResize({
-            width: true,
-            height: true,
-            vertical: true,
-            horizontal: true,
-        });
-
-        const [width, height] = this.getSize();
-        viewWindow.setBounds({
-            x: 0,
-            y: 0,
-            width,
-            height
-        });
-    }
-}
-
-class LoginBrowser extends CommonBrowser{
-    constructor(options: Options = {}){
-        Logger.info('[LoginBrowser -> constructor]', options);
-        super({
-            width: 450,
-            height: 600,
-            resizable: false,
-            minimizable: false,
-            maximizable: false,
-            fullscreenable: false,
-            ...options
-        }, WindowModule.Login);
-
-        this.initEvent = {}
-    }
-}
-
-class HomeBrowser extends CommonBrowser{
-    constructor(options: Options = {}){
-        super({
-            width: BROWSER_DEFAULT_WIDTH,
-            height: BROWSER_DEFAULT_HEIGHT,
-            show: false,
-            minWidth: HOME_BROWSER_MIN_WIDTH,
-            minHeight: HOME_BROWSER_MIN_HEIGHT,
-            ...options
-        }, WindowModule.Home);
-    }
-}
-
-class EditorBrowser extends CommonBrowser{
-    constructor(options: Options = {}){
-        super({
-            width: BROWSER_DEFAULT_WIDTH,
-            height: BROWSER_DEFAULT_HEIGHT,
-            show: false,
-            minWidth: HOME_BROWSER_MIN_WIDTH,
-            minHeight: HOME_BROWSER_MIN_HEIGHT,
-            ...options
-        }, WindowModule.Editor);
-
-        this.initEvent = this.getEvent();
-    }
+  showLoading() {
+    const { x, y, width, height } = this.getBounds();
+    const { width: loadingWidth, height: loadingHeight } = this.modalLoadingWindow.getBounds();
+    this.modalLoadingWindow.setBounds({
+      x: x + Math.round((width - loadingWidth) / 2),
+      y: y + Math.round((height - loadingHeight) / 2),
+      width: loadingWidth,
+      height: loadingHeight,
+    });
     
-    getEvent(){
-        return {
-            ['closed']: ()=>{
-                Logger.warn('[EditorBrowser -> getEvent]', `【${this.moduleName}】`, 'on:closed');
-                WindowManager.getWindow(WindowModule.Home)?.moveTop(); 
-            }
+    this.modalLoadingWindow.show();
+  }
+
+  closeLoading() {
+    this.modalLoadingWindow.hide();
+  }
+
+  initContentsEvent(viewWindow: BrowserView | BrowserWindow) {
+    const webContents = viewWindow.webContents;
+
+    // 主要用于监听browserView的初始事件
+    webContents.on('dom-ready', () => {
+      Logger.info(
+        `[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready  show->URL:${webContents.getURL()}`,
+      );
+
+      // this.show();
+    });
+
+    webContents.on('before-input-event', (event, input) => {
+      if (input.key.toLocaleLowerCase() === 'f12') {
+        Logger.info(
+          '[CommonBrowser -> initContentsEvent] on:before-input-event',
+          `【${this.moduleName}】`,
+          '按下并拦截了F12',
+        );
+        if (!webContents.isDevToolsOpened()) {
+          webContents.openDevTools();
+        } else {
+          webContents.closeDevTools();
         }
-    }
+        event.preventDefault();
+      }
+
+      if (input.key.toLocaleLowerCase() === 'f5') {
+        Logger.info(
+          '[CommonBrowser -> initContentsEvent] on:before-input-event',
+          `【${this.moduleName}】`,
+          '按下并拦截了F5',
+        );
+        webContents.reload();
+        event.preventDefault();
+      }
+    });
+
+    webContents.on('did-fail-load', (e, ...args: unknown[]) => {
+      const [, , url] = args;
+      Logger.info(
+        '[CommonBrowser -> initContentsEvent] did-fail-load',
+        `【${this.moduleName}】`,
+        '页面错误/崩溃',
+        HTML_ERROR_CRASH_WEBPACK_ENTRY,
+        url,
+      );
+      if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url) {
+        return;
+      }
+      this.show();
+      this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY, { referrer: `${url || ''}` });
+    });
+
+    webContents.on('console-message', (e, level, ...args: unknown[]) => {
+      store.get('debug') && Logger.info(
+          '[CommonBrowser -> initContentsEvent]',
+          `【${this.moduleName}】console-message`,
+          webContents.getURL(),
+          args
+        );
+    });
+
+    // 在渲染进程中由 window.open 成功创建窗口之后 触发
+    webContents.on('did-create-window', (win, details) => {
+      Logger.info(
+        '[CommonBrowser -> initContentsEvent] did-create-window',
+        `【${this.moduleName}】`,
+        `url:${details.url}`,
+      );
+    });
+
+    // 访问的网站证书的链接验证失败时
+    webContents.on('certificate-error', (e, ...args: unknown[]) => {
+      const [url, error, certificate] = args;
+      Logger.info(
+        '[CommonBrowser -> initContentsEvent] did-create-window',
+        `【${this.moduleName}】`,
+        `url:${url} errorCode: ${error} certificate: ${certificate}`,
+      );
+    });
+
+    const defaultUserAgent =  process.platform === 'darwin' ? MAC_OS_CHROME_USER_AGENT : WINDOW_CHROME_USER_AGENT;
+    const userAgent = webContents.getUserAgent() || defaultUserAgent;
+    webContents.setUserAgent(`${userAgent} mockRPD mockplusrp/${isPrivate ? 'ENT' : 'PUB'} bate`);
+
+    // 拦截window.open，并使用`系统默认浏览器跳转
+    webContents.setWindowOpenHandler(({ url, referrer }) => {
+      Logger.info('[CommonBrowser -> initContentsEvent] setWindowOpenHandler', url, referrer);
+      shell.openExternal(url).catch(() => {
+        Logger.info('[CommonBrowser -> initContentsEvent] setWindowOpenHandler', url, '打开失败');
+      });
+      return { action: 'deny' }; //{ action: 'deny' }
+    });
+  }
+
+  initBrowserEvent() {
+    // BrowserView的内容加载不会直接触发该事件， browserWindow.load时触发该事件； 请注意electron官方注解
+    this.once(BrowserWindowEvent.ReadyToShow, () => {
+      Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
+      if (this.moduleName !== WindowModule.Login) {
+        this.show();
+        [this,...Array.from(this.viewMap.values())].forEach((view) => {
+          view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys()));
+          view.webContents.send(
+            ChannelTypes.UpdateWindowMode,
+            this.isMaximized()
+              ? 'maximize'
+              : this.isMinimized()
+              ? 'minimized'
+              : this.isFullScreen()
+              ? 'fullscreen'
+              : 'normal',
+          );
+        });
+
+        // this.modalLoadingWindow.show();
+
+        // TODO 待定！
+        // WindowManager.handleWindowReadyShow(this.moduleName, this.tag);
+      }
+    });
+
+    this.on(BrowserWindowEvent.ReadyToShow, () => {
+      Logger.info(
+        '[CommonBrowser -> initBrowserEvent]',
+        `【${this.moduleName}】`,
+        'on:ready-to-show',
+        `载入的URL地址：${this.webContents.getURL()}`,
+      );
+
+      if (this.webContents.getURL() !== store.get('envConfig').domain) {
+        // this.show();
+        // this.moveTop();
+        // this.initEvent['ready-to-show']?.();
+      }
+    });
+
+    this.on('resize', () => {
+      // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
+      this.bounds = this.getBounds();
+    });
+
+    this.on('move', () => {
+      // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
+      this.bounds = this.getBounds();
+    });
+
+    /** 系统窗口切换，最小化到恢复，都会触发该事件  */
+    this.on('show', () => {
+      // Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:show');
+    });
+
+    this.on('maximize', () => {
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:maximize', '窗口最大化');
+      this.webContents.send(ChannelTypes.UpdateWindowMode, 'maximize');
+      this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'maximize'));
+    });
+
+    this.on('minimize', () => {
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:minimize', '窗口最小化');
+      this.webContents.send(ChannelTypes.UpdateWindowMode, 'minimize');
+      this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'minimize'));
+    });
+
+    this.on('unmaximize', () => {
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:unmaximize', '窗口取消最大化');
+      this.webContents.send(ChannelTypes.UpdateWindowMode, 'normal');
+      this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
+    });
+
+    // this.on('restore', ()=>{
+    //     console.log('restore',this.isFullScreen(), this.isMaximized(), this.isMinimized())
+    //     // memoryCache.windowMode[this.moduleName] = 'normal';
+    //     this.viewMap.forEach(view=>view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
+    // })
+
+    this.on('enter-full-screen', () => {
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:enter-full-screen', '窗口进入全屏状态');
+      this.webContents.send(ChannelTypes.UpdateWindowMode, 'fullscreen');
+      this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'fullscreen'));
+    });
+
+    this.on('leave-full-screen', () => {
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:leave-full-screen', '窗口退出全屏状态');
+      this.webContents.send(ChannelTypes.UpdateWindowMode, 'normal');
+      this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
+    });
+
+    // 监听窗口关闭事件，接收到此事件时，需销毁对象引用关系；否则进程报错
+    this.on('closed', () => {
+      Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:close');
+
+      if (this.moduleName !== WindowModule.Login) {
+        store.set('windowBounds', {
+          ...store.get('windowBounds'),
+          [`${this.moduleName}`]: this.bounds,
+        });
+      }
+
+      WindowManager.removeWindow(this.moduleName, this.tag);
+      this.initEvent['closed']?.();
+    });
+  }
+
+  private createViewWindow(url: string) {
+    Logger.warn('[CommonBrowser -> createViewWindow]', `【${this.moduleName}】创建视图窗口: ${url}`);
+
+    const viewWindow = new BrowserView({
+      webPreferences: {
+        nodeIntegration: true,
+        preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
+      },
+    });
+
+    this.viewMap.set(url, viewWindow);
+    this.initContentsEvent(viewWindow);
+    this.addBrowserView(viewWindow);
+    this.setTopBrowserView(viewWindow); // 需先将win添加到browser中
+
+    viewWindow.setAutoResize({
+      width: true,
+      height: true,
+      vertical: true,
+      horizontal: true,
+    });
+
+    const [width, height] = this.getSize();
+    viewWindow.setBounds({
+      x: 0,
+      y: 0,
+      width,
+      height,
+    });
+  }
 }
 
-class PreviewBrowser extends CommonBrowser{
-    constructor(options: Options = {}){
-        super({
-            width: BROWSER_DEFAULT_WIDTH,
-            height: BROWSER_DEFAULT_HEIGHT,
-            show: false,
-            minWidth: HOME_BROWSER_MIN_WIDTH,
-            minHeight: HOME_BROWSER_MIN_HEIGHT,
-            fullscreenable: false,
-            fullscreen: true,
-            ...options
-        }, WindowModule.Preview);
+class LoginBrowser extends CommonBrowser {
+  moduleName = WindowModule.Login;
+  constructor(options: Options = {}) {
+    super({
+      width: 450,
+      height: 600,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      ...options,
+    });
 
-        this.once('ready-to-show', ()=>{
-            this.maximize();
-        })
-    }
+    this.initEvent = {};
+  }
 }
 
-class LoadingBrowser extends CommonBrowser{
-    constructor(options: Options = {}){
-        super({
-            width: LOADING_WINDOW_WIDTH,
-            height: LOADING_WINDOW_HEIGHT,
-            minWidth: LOADING_WINDOW_WIDTH,
-            minHeight: LOADING_WINDOW_HEIGHT,
-            transparent: true,
-            alwaysOnTop: true,
-            ...options
-        }, WindowModule.Loading);
+class HomeBrowser extends CommonBrowser {
+  moduleName = WindowModule.Home;
+  constructor(options: Options = {}) {
+    super({
+      width: BROWSER_DEFAULT_WIDTH,
+      height: BROWSER_DEFAULT_HEIGHT,
+      show: false,
+      minWidth: HOME_BROWSER_MIN_WIDTH,
+      minHeight: HOME_BROWSER_MIN_HEIGHT,
+      ...options,
+    });
+  }
+}
 
-        this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+class EditorBrowser extends CommonBrowser {
+  moduleName = WindowModule.Editor;
+  constructor(options: Options = {}) {
+    super({
+      show: false,
+      minWidth: HOME_BROWSER_MIN_WIDTH,
+      minHeight: HOME_BROWSER_MIN_HEIGHT,
+      ...options,
+      ...EditorBrowser.getInitBounds(),
+    });
 
-        this.initEvent = this.getEvent();
+    this.initEvent = this.getEvent();
+  }
+
+  // 创建新窗口时，偏移处理
+  static getInitBounds(){
+    const bounds = store.get('windowBounds')[`${WindowModule.Editor}`] || {};
+    const newBounds:Partial<Electron.Rectangle> =  {
+      width: bounds.width ?? BROWSER_DEFAULT_WIDTH, 
+      height: bounds.height ?? BROWSER_DEFAULT_HEIGHT
     }
+    if(bounds.x){
+      newBounds.x =  bounds.x  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10
+    }
+    if(bounds.y){
+      newBounds.y =  bounds.y  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10
+    }
+    return newBounds;
+  }
+
+  getEvent() {
+    return {
+      ['closed']: () => {
+        Logger.warn('[EditorBrowser -> getEvent]', `【${this.moduleName}】`, 'on:closed');
+
+        if(WindowManager.getModuleWindow(WindowModule.Editor)?.size === 0){
+          WindowManager.getWindow(WindowModule.Home)?.show();
+        }
+      },
+    };
+  }
+}
+
+class PreviewBrowser extends CommonBrowser {
+  moduleName = WindowModule.Preview;
+  constructor(options: Options = {}) {
+    super({
+      width: BROWSER_DEFAULT_WIDTH,
+      height: BROWSER_DEFAULT_HEIGHT,
+      show: false,
+      minWidth: HOME_BROWSER_MIN_WIDTH,
+      minHeight: HOME_BROWSER_MIN_HEIGHT,
+      fullscreenable: true,
+      fullscreen: true,
+      ...options,
+    });
+
+    // this.once('ready-to-show', () => {
+    //   this.maximize();
+    // });
+  }
+}
+
+/**
+ * 注意： 作为模态窗口，显示/隐藏需要与父窗口同时设置
+ */
+class LoadingBrowser extends BrowserWindow {
+  constructor(options: Options = {}) {
+    super({
+      width: LOADING_WINDOW_WIDTH,
+      height: LOADING_WINDOW_HEIGHT,
+      minWidth: LOADING_WINDOW_WIDTH,
+      minHeight: LOADING_WINDOW_HEIGHT,
+      resizable: false,
+      transparent: true,
+      alwaysOnTop: true,
+      frame: false,
+      show: false,
+      titleBarStyle: 'customButtonsOnHover',
+      trafficLightPosition: { x: -20, y: -20 },
+      webPreferences: {
+        nodeIntegration: true,
+        preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
+      },
+      ...options,
+    });
+
+    Logger.info('[LoadingBrowser -> constructor] ', `Loading窗口：${HTML_LOADING_WEBPACK_ENTRY}`);
+
+    this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+
+    /** 针对mac的显示隐藏待优化 ===  */
+    this.on('show', async ()=>{
+      const parentContents =  this.getParentWindow()?.webContents;
+      const k = await (parentContents||this.webContents)?.insertCSS(`body,html{pointer-events:none;}`);
+      this.once('hide', ()=>{
+        const parentContents =  this.getParentWindow()?.webContents;
+        k && (parentContents||this.webContents)?.removeInsertedCSS(k);
+      })
+    })
+  }
+}
+
+
+class StartupBrowser extends BrowserWindow {
+  protected moduleName = WindowModule.Loading;
+  constructor(options: Options = {}) {
+    super({
+      width: LOADING_WINDOW_WIDTH,
+      height: LOADING_WINDOW_HEIGHT,
+      minWidth: LOADING_WINDOW_WIDTH,
+      minHeight: LOADING_WINDOW_HEIGHT,
+      resizable: false,
+      transparent: true,
+      alwaysOnTop: true,
+      frame: false,
+      show: false,
+      titleBarStyle: 'customButtonsOnHover',
+      webPreferences: {
+        nodeIntegration: true,
+        preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
+      },
+      trafficLightPosition: { x: -20, y: -20 },
+      ...options,
+    });
+
+    this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
     
-    getEvent(){
-        return {
-        }
-    }
+  }
 }
 
 class WindowManager {
-    private static windowMap = new Map<WindowModule, CommonBrowser>();
-    public static loadingWindow:BrowserWindow|undefined = undefined;
+  private static windowMap = new Map<string, CommonBrowser>();
+  private static windowTagMap = new Map<WindowModule, Map<string, CommonBrowser>>();
 
-    static create(module:WindowModule, options: Options = {}){
-        Logger.warn('[WindowManager -> create]', `【${module}】`, `窗口是否存在：${this.windowMap.has(module)}`);
-        if (this.windowMap.has(module)){
-            this.windowMap.get(module)?.show();
-            return;
-        }
-        if(!this.loadingWindow){
-            this.loadingWindow = new LoadingBrowser({
-                trafficLightPosition: { x: -10, y: -10 }
-            });
-        }
-        if( module === WindowModule.Login ){
-            const loginWindow = new LoginBrowser(options);
-            this.windowMap.set(WindowModule.Login, loginWindow);
-        }else if(module === WindowModule.Home){
-            const homeWindow = new HomeBrowser(options);
-            this.windowMap.set(WindowModule.Home, homeWindow);
-        }else if(module === WindowModule.Editor){
-            const editorWindow = new EditorBrowser(options);
-            this.windowMap.set(WindowModule.Editor, editorWindow);
-        }else if(module === WindowModule.Preview){
-            const previewWindow = new PreviewBrowser(options);
-            this.windowMap.set(WindowModule.Preview, previewWindow);
-        }else{
-            this.windowMap.set(module, new CommonBrowser(options));
-        }
+  private static _homeBrowser: CommonBrowser | null = null;
+  private static _loginBrowser: CommonBrowser | null = null;
+
+  /**
+   * 创建一个窗口
+   * @param module 模块名称
+   * @param tag 模块标识
+   * @param options 窗口配置
+   * @returns
+   */
+  static create(module: WindowModule, tag = MAIN_TAG_NAME, options: Options = {}): CommonBrowser {
+    let win: CommonBrowser | undefined = undefined;
+    win = this.getWindow(module, tag);
+    Logger.warn(
+      '[WindowManager -> create]',
+      `【${module}-${tag}】`,
+      `窗口是否存在: ${!!win}`,
+    );
+    if (win) {
+      win.show();
+      return win;
     }
 
-    static getWindow(module:WindowModule){
-        return this.windowMap.get(module);
+    if (module === WindowModule.Login) {
+      win = new LoginBrowser(options);
+      this._loginBrowser = win;
+    } else if (module === WindowModule.Home) {
+      win = new HomeBrowser(options);
+      this._homeBrowser = win;
+    } else if (module === WindowModule.Editor) {
+      win = new EditorBrowser(options);
+    } else if (module === WindowModule.Preview) {
+      win = new PreviewBrowser(options);
+    } else {
+      win = new CommonBrowser(options);
     }
+    win.tag = tag;
 
-    static removeWindow(module:WindowModule){
-        this.windowMap.delete(module);
+    if(!this.windowTagMap.has(module)){
+      this.windowTagMap.set(module, new Map() );
     }
+    this.windowTagMap.get(module)?.set(tag, win);
+    this.windowMap.set(`${win.id}`, win);
+    return win;
+  }
 
-    static getAllWindow():CommonBrowser[]{
-        return Array.from(this.windowMap.values()).filter(win=>!win.isDestroyed());
-    }
-
-    static getShowWindow(): BrowserWindow[]{
-        return Array.from(this.windowMap.values()).filter(win=>win.isVisible());
-    }
-
-    static closeAllWindow():void {
-        this.getAllWindow().forEach(item=>item.close());
-    }
-
-    static hideAllWindow():void {
-        this.getAllWindow().forEach(item=>item.hide());
-    }
-
-    // static window(name:Views, flag=''): (options?:Options)=> BrowserWindow {
-    //     const winName = `${name}${flag}`;
-    //     const winID = this.windowIDS.get(winName);
-    //     const isAlive = BrowserWindow.getAllWindows().find( w=> w.id ===  winID); // 相关进程还存在
-    //     if(!isAlive){
-    //         // 保证使用渲染窗口不会出现错误
-    //         this.windowIDS.delete(winName);
-    //         this.windowMap.delete(winName);
-    //     }
-
-    //     let browser:BrowserWindow;
-
-    //     if(this.windowMap.has(winName)){
-    //         browser = this.windowMap.get(winName);
-    //     }
-
-    //     return (options:Options={})=>{
-    //         return browser || this.create(name, flag, options);
-    //     }
+  static getWindow(module: WindowModule, tag: string = MAIN_TAG_NAME) {
+    // if (!tag) {
+    //   const win = Array.from(this.windowMap.keys())
+    //     .filter((key) => key.startsWith(module))
+    //     .map((key) => this.windowMap.get(key))
+    //     // .find((win) => win?.isFocused());
+    //   return win;
     // }
+    return this.windowTagMap.get(module)?.get(tag);
+  }
+
+  static get homeBrowser() {
+    return this._homeBrowser;
+  }
+
+  static get loginBrowser() {
+    return this._loginBrowser;
+  }
+
+  static removeWindow(module: WindowModule, tag = MAIN_TAG_NAME) {
+    this.windowTagMap.get(module)?.delete(tag);
+    const hasWindow = !!this.getSize();
+    if (!hasWindow) {
+      app.emit('window-all-closed');
+    }
+  }
+
+  static getSize() {
+    return Array.from(this.windowTagMap.values()).filter(winMap=>winMap.size>0).length;
+  }
+
+  /** 获取所有可用窗口 */
+  static getAllWindow(): CommonBrowser[] {
+    return Array.from(this.windowTagMap.values()).reduce((res, curr)=>res.concat(Array.from(curr.values())), [] as CommonBrowser[]);
+  }
+
+  /** 关闭渲染进程窗口并同步删除管理器引用 */
+  static closeAllWindow(): void {
+    this.getAllWindow().forEach((item) => {
+      this.removeWindow(item.moduleName, item.tag);
+      item.close();
+    });
+  }
+
+  /** 获取当前焦点窗口或者可见窗口 */
+  static getFocusWindow(): CommonBrowser |undefined {
+    return this.getAllWindow().find(win=> win.isFocused() || win.isVisible());
+  }
+
+  /** 隐藏所有窗口，窗口进程不销毁，且引用存在 */
+  static hideAllWindow(): void {
+    this.getAllWindow().forEach((item) => item.hide());
+  }
+
+  /** 每个窗口都有id，根据id获取窗口 */
+  static fromId(id: string): CommonBrowser | undefined {
+    return this.getAllWindow().find(win => `${win.id}`===id);
+  }
+
+  /** 获取相关模块所关联的窗口 */
+  static getModuleWindow(module:WindowModule){
+    return this.windowTagMap.get(module);
+  }
+
+  static handleWindowReadyShow = (moduleName: string) => {
+    // 首页显示的时候，关闭登录页面
+    // if (moduleName === WindowModule.Home) {
+    //   this._loginBrowser?.close();
+    //   this._loginBrowser = null;
+    //   return;
+    // }
+    if (this.windowMap.size > 1 && !this._homeBrowser?.isDestroyed()) {
+      this._homeBrowser?.hide();
+    }
+    if (moduleName === WindowModule.Login) {
+      Array.from(this.windowMap.values()).forEach((win) => {
+        if (win.moduleName !== moduleName) {
+          win.close();
+        }
+      });
+      this._homeBrowser = null;
+    }
+    if (moduleName === WindowModule.Home) {
+      this._loginBrowser?.close();
+    }
+  };
+
+  static handleWindowClosed = (moduleName: string) => {
+    if (moduleName !== WindowModule.Home) {
+      if (this._homeBrowser && !this._homeBrowser.isDestroyed() && !this._homeBrowser.isVisible()) {
+        this._homeBrowser?.show();
+      }
+    }
+  };
 }
+
+export { StartupBrowser }
 
 export default WindowManager;

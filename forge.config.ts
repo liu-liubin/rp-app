@@ -9,12 +9,14 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import {PROGRAM_AUTHOR} from './src/constants';
+import fs from 'fs-extra';
 
 const config: ForgeConfig = {
   buildIdentifier: 'bate',
   packagerConfig: {
     appBundleId: 'com.electron.rp-app',
-    name: 'rp-app',
+    name: '摹客RP Bate',
     asar: true,
     icon: './src/assets/icons/icon',
     osxSign: {
@@ -27,11 +29,15 @@ const config: ForgeConfig = {
     //   teamId: 'Liu Song (7PZMT8T5KL)'
     // }
   },
-  hooks: { },
+  hooks: {
+    generateAssets:  async () => {
+      fs.copySync('./src/static/', './.webpack/renderer/static/', {recursive: true})
+    }
+   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      authors: 'Mockplus Technology Co.,Ltd.',
+      authors: PROGRAM_AUTHOR,
       description: 'mockplus rp',
       certificateFile: './cert/mockplus.pfx',
       certificatePassword: "Jongde@61367719",
@@ -64,12 +70,17 @@ const config: ForgeConfig = {
         config: rendererConfig,
         entryPoints: [
           {
-            // html: './src/views/app/index.html',
-            // js: './src/views/app/renderer.ts',
+            html: './src/views/main/index.html',
+            js: './src/views/main/index.ts',
             name: 'main_app',
             preload: {
               js: './src/preload.ts',
             },
+          },
+          {
+            html: './src/views/error/index.html',
+            js: './src/views/error/index.ts',
+            name: 'html_error'
           },
           {
             html: './src/views/error/crash/index.html',
@@ -86,19 +97,13 @@ const config: ForgeConfig = {
             // preload: {
             //   js: './src/views/login/preload.ts',
             // },
-          },
-          // {
-          //   html: './src/views/project/child/index.html',
-          //   js: './src/views/project/child/renderer.ts',
-          //   name: 'project_child_window',
-          //   preload: {
-          //     js: './src/views/project/child/preload.ts',
-          //   },
-          // },
+          }
         ],
       },
     }),
   ],
 };
+
+
 
 export default config;

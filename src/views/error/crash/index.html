@@ -40,25 +40,8 @@
       padding-bottom: 146px;
       margin-top: 40px;
     }
-
-    .content-img {
-      width: 200px;
-      height: 200px;
-    }
-
     .content-back {
       margin-top: 32px;
-    }
-
-    #reloadID {
-      padding: 0 32px;
-      line-height: 36px;
-      height: 36px;
-      background-color: #009dff;
-      border-radius: 4px;
-      border: 0;
-      color: #EEF0F4;
-      font-weight: 700;
     }
 
     #reloadID:hover {
@@ -157,7 +140,7 @@
   </div>
   <div class="container">
     <div class="content" id="content">
-      <img class="content-img" src="~@/src/assets/images/crash@2x.png" />
+      <div class="content-img"></div>
       <p class="content-title" id="contentTitleID">
         抱歉，出现异常问题
       </p>
@@ -171,7 +154,7 @@
         </a>
       </p>
       <div class="content-back">
-        <button id="reloadID">
+        <button id="btn-reload">
           刷新
         </button>
       </div>
