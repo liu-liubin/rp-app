@@ -37,7 +37,7 @@
     "electron": "25.2.0",
     "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
-    "electron-winstaller": "^5.1.2",
+    "electron-winstaller": "^5.0.0",
     "eslint": "^8.44.0",
     "eslint-plugin-import": "^2.27.5",
     "fork-ts-checker-webpack-plugin": "^7.3.0",
