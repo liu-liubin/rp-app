@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type IForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
 import fs from 'fs-extra';
-// import {cp} from 'node:fs/promises';
-// console.log('====>',cp)
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ForkTsCheckerWebpackPlugin: typeof IForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
@@ -14,8 +12,9 @@ class CopyStatic {
     compiler.hooks.emit.tapAsync(
       'CopyStatic',
       (compilation:any, callback:any) => {
-        console.log('copy', )
-        fs.copySync('./src/static/', './.webpack/renderer/static/', {recursive: true})
+        if(!fs.existsSync('./.webpack/renderer/static/')){
+          fs.copySync('./src/static/', './.webpack/renderer/static/', {recursive: true});
+        }
         callback();
       }
     );

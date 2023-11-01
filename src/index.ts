@@ -145,7 +145,6 @@ const createIpcChannel = () => {
 
   ipcMain.handle(ChannelTypes.Show, async (e, windowId: string) => {
     const currWindow = WindowManager.fromId(windowId);
-    // console.log('======show', BrowserWindow.fromId(Number(windowId)) ,windowId)
     Logger.info('[APP] ipcMain.handle Show', !currWindow ? `窗口不存在` : `显示当前窗口: ${currWindow?.moduleName}`);
     if (currWindow?.isDestroyed()) {
       return true;
@@ -163,7 +162,7 @@ const createIpcChannel = () => {
 
   // 程序启动 / 打开登录窗口
   ipcMain.on(ChannelTypes.ToLogin, (e, url: string) => {
-    const viewUrl = url || store.get('envConfig').domain || MAIN_APP_WEBPACK_ENTRY.replace('main_app', 'static/index.html') || HTML_ERROR_WEBPACK_ENTRY;
+    const viewUrl = url || store.get('envConfig').domain || MAIN_APP_WEBPACK_ENTRY.replace('main_app', 'static/main') || HTML_ERROR_WEBPACK_ENTRY;
     Logger.info('[APP] ipcMain ToLogin', '程序启动 / 打开了登录窗口', `URL: ${viewUrl}`);
     // 存在其他窗口则关闭，此时仅可保留一个登录窗口 , 注意： 确保登录页URL唯一
     //WindowManager.getAllWindow().forEach((win) => win.moduleName !== WindowModule.Login && win.close());
@@ -214,28 +213,33 @@ const createIpcChannel = () => {
 
   ipcMain.on(ChannelTypes.Fullscreen, (e, windowId: string, flag: boolean) => {
     const win = WindowManager.fromId(windowId);
-    Logger.info('[APP] ipcMain Fullscreen', '窗口全屏', win?.moduleName);
+    Logger.info('[APP] ipcMain:on Fullscreen', '窗口全屏', win?.moduleName);
     if (win) {
       win.setFullScreen(flag);
     }
   });
 
   ipcMain.on(ChannelTypes.ShowAbout, () => {
-    Logger.info('[APP] ipcMain ShowAbout');
+    Logger.info('[APP] ipcMain:on ShowAbout');
     app.showAboutPanel();
   });
 
   ipcMain.on(ChannelTypes.ShowLoading, (e, windowId) => {
-    Logger.info('[APP] ipcMain ShowLoading');
+    Logger.info('[APP] ipcMain:on ShowLoading');
     const win = WindowManager.fromId(windowId);
     win?.showLoading();
   });
 
   ipcMain.on(ChannelTypes.CloseLoading, (e, windowId) => {
-    Logger.info('[APP] ipcMain CloseLoading');
+    Logger.info('[APP] ipcMain:on CloseLoading');
     const win = WindowManager.fromId(windowId);
     win?.closeLoading();
   });
+
+  ipcMain.on(ChannelTypes.Message, (e, ...args:unknown[]) => {
+    Logger.info('[APP] ipcMain:on Message', args);
+    WindowManager.getAllWindow().forEach(win=>win.webContents.send(ChannelTypes.Message, ...args));
+  });  
 
   ipcMain.on(ChannelTypes.ConsoleLogger, (e, ...args: unknown[]) => {
     Logger.info('[APP] 来自网页日志：', ...args);
@@ -248,6 +252,15 @@ app.setAboutPanelOptions({
   version: app.getVersion(),
   copyright: PROGRAM_AUTHOR,
   iconPath: './assets/images/logo.png',
+});
+
+app.on('render-process-gone', (e, webContents, details)=>{
+  Logger.info('[APP] 子进程发生意外', webContents.getURL(), details);
+});
+
+app.on('child-process-gone', (e, details)=>{
+  Logger.info('[APP] 渲染进程发生意外', details);
+  app.quit();
 });
 
 app.on('ready', () => {

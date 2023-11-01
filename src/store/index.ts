@@ -5,13 +5,11 @@ import Store from 'electron-store';
 // import { MockplusEnv, TEnvType, envType, onDev } from '../helper/env';
 // import mockplus from '../mockplus';
 
-interface IApi {
+interface IEnvConfig {
+  /** 配置程序入口页面地址 */
+  domain: string; 
+  /** 记录程序首页 */
   home: string;
-  domain: string;
-  loginUrl: string;
-  signupUrl: string;
-  apiCC: string;
-  apiRP: string;
 }
 
 export interface IStore {
@@ -23,7 +21,7 @@ export interface IStore {
   webStore: {
     [k:string]: unknown;
   };
-  envConfig: Partial<IApi>;
+  envConfig: Partial<IEnvConfig>;
   windowBounds:{[k:string]:Partial<Electron.Rectangle> |undefined};
   //   env: any; // 当前环境 - 生产包仅读
   //   envConfig?: any, // 环境配置 - 生产包仅读

@@ -221,7 +221,7 @@ class CommonBrowser extends BrowserWindow {
         HTML_ERROR_CRASH_WEBPACK_ENTRY,
         url,
       );
-      if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url) {
+      if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url || !url) {
         return;
       }
       this.show();

@@ -10,13 +10,12 @@ import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import {PROGRAM_AUTHOR} from './src/constants';
-import fs from 'fs-extra';
 
 const config: ForgeConfig = {
   buildIdentifier: 'bate',
   packagerConfig: {
     appBundleId: 'com.electron.rp-app',
-    name: '摹客RP Bate',
+    name: 'rp-app',
     asar: true,
     icon: './src/assets/icons/icon',
     osxSign: {
@@ -30,10 +29,7 @@ const config: ForgeConfig = {
     // }
   },
   hooks: {
-    generateAssets:  async () => {
-      fs.copySync('./src/static/', './.webpack/renderer/static/', {recursive: true})
-    }
-   },
+  },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({

@@ -1,7 +1,7 @@
 {
-  "name": "mockplus-rp",
+  "name": "rp-app",
   "productName": "摹客RP Bate",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "摹客RP BATE版本",
   "main": ".webpack/main",
   "scripts": {
@@ -23,7 +23,7 @@
   "devDependencies": {
     "@electron-forge/cli": "^6.2.1",
     "@electron-forge/maker-deb": "^6.2.1",
-    "@electron-forge/maker-dmg": "^6.2.1",
+    "@electron-forge/maker-dmg": "^6.2.2",
     "@electron-forge/maker-rpm": "^6.2.1",
     "@electron-forge/maker-squirrel": "^6.2.1",
     "@electron-forge/maker-zip": "^6.2.1",

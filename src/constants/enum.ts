@@ -33,6 +33,7 @@ export enum ChannelTypes {
     InvokeSubscribe = 'emitSubscribe',
     CapturePage = 'capturePage',
     ConsoleLogger = 'consoleLogger',
+    Message = 'message',
 
     GetTabViews = 'on:getTabViews',
     UpdateWindowMode = 'on:updateWindowMode',
