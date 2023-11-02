@@ -19,14 +19,19 @@ const config: ForgeConfig = {
     asar: true,
     icon: './src/assets/icons/icon',
     osxSign: {
-      identity: 'Liu Song (7PZMT8T5KL)'
+      identity: 'Liu Song (7PZMT8T5KL)',
+      optionsForFile: ()=>{
+        return {
+          entitlements: './cert/entitlements.mac.plist'
+        }
+      }
     }, // object must exist even if empty
-    // osxNotarize: {
-    //   tool: 'notarytool',
-    //   appleId: 'jongde.com@gmail.com',
-    //   appleIdPassword: 'rggl-xqaj-dpti-xzwa',
-    //   teamId: 'Liu Song (7PZMT8T5KL)'
-    // }
+    osxNotarize: {
+      tool: 'legacy',
+      appleId: 'jongde.com@gmail.com',
+      appleIdPassword: 'rggl-xqaj-dpti-xzwa',
+      // teamId: 'Liu Song (7PZMT8T5KL)'
+    }
   },
   hooks: {
   },
