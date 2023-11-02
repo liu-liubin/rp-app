@@ -14,26 +14,27 @@ import {PROGRAM_AUTHOR} from './src/constants';
 const config: ForgeConfig = {
   buildIdentifier: 'bate',
   packagerConfig: {
-    appBundleId: 'com.electron.rp-app',
+    appBundleId: 'com.electron.rp-app-electron',
     name: 'rp-app',
     asar: true,
     icon: './src/assets/icons/icon',
     osxSign: {
       identity: 'Liu Song (7PZMT8T5KL)',
-      optionsForFile: ()=>{
-        return {
-          entitlements: './cert/entitlements.mac.plist'
-        }
-      }
+      // optionsForFile: ()=>{
+      //   return {
+      //     entitlements: './cert/entitlements.mac.plist'
+      //   }
+      // },
     }, // object must exist even if empty
     osxNotarize: {
-      // tool: 'notarytool',
+      tool: 'notarytool',
       appleId: 'jongde.com@gmail.com',
       appleIdPassword: 'rggl-xqaj-dpti-xzwa',
-      // teamId: 'Liu Song (7PZMT8T5KL)'
-    }
+      teamId: '7PZMT8T5KL'
+    },
   },
   hooks: {
+    
   },
   rebuildConfig: {},
   makers: [
@@ -47,7 +48,7 @@ const config: ForgeConfig = {
     new MakerDMG({
       icon: './src/assets/icons/icon.icns'
     }),
-    new MakerZIP({  }, ['darwin', 'linux', 'win32']), 
+    new MakerZIP({ }, ['darwin', 'linux', 'win32']), 
     new MakerRpm({}), 
     new MakerDeb({})
   ],
