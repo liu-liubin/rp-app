@@ -25,7 +25,9 @@ const config: ForgeConfig = {
       //     entitlements: './cert/entitlements.mac.plist'
       //   }
       // },
-    }, // object must exist even if empty
+      // export CSC_LINK=cert/mockplus.p12
+      // export CSC_KEY_PASSWORD="123456"
+    },
     osxNotarize: {
       tool: 'notarytool',
       appleId: 'jongde.com@gmail.com',
