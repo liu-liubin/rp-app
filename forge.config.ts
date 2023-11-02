@@ -26,12 +26,12 @@ const config: ForgeConfig = {
         }
       }
     }, // object must exist even if empty
-    // osxNotarize: {
-    //   tool: 'notarytool',
-    //   appleId: 'jongde.com@gmail.com',
-    //   appleIdPassword: 'rggl-xqaj-dpti-xzwa',
-    //   // teamId: 'Liu Song (7PZMT8T5KL)'
-    // }
+    osxNotarize: {
+      // tool: 'notarytool',
+      appleId: 'jongde.com@gmail.com',
+      appleIdPassword: 'rggl-xqaj-dpti-xzwa',
+      // teamId: 'Liu Song (7PZMT8T5KL)'
+    }
   },
   hooks: {
   },
