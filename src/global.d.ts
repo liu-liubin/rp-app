@@ -10,7 +10,7 @@ declare namespace NodeJS {
   interface Process {
     env: {
       moduleName: string;
-      npm_package_version: string;
+      version: string;
       windowId: string;
     }
   }
@@ -20,7 +20,10 @@ declare interface RPBridge {
   /** 程序启动 - 请确保在入口页面中调用, 通知页面加载成功并可以正常启动程序 */
   startup: () => Promise<unknown>;
 
-  /** 跳转到RP首页, 设置url， url为空则加载上一次所设置的url窗口 */
+  /** 
+   * 跳转到RP首页, 设置url， url为空则加载上一次所设置的url窗口 
+   * Promise返回将发生在ready-to-show事件里
+   */
   toHome: (url?: string) => Promise<unknown>;
   toEditor: (url: string, appID?: string) => Promise<unknown>; // 跳转到RP编辑页
   toPreview: (url: string, appID?: string) => Promise<unknown>; // 跳转到RP预览页
@@ -68,11 +71,17 @@ declare interface RPBridge {
   /** 接收网页日志并记录到本机缓存中 */
   log: () => void;
   /** 获取程序安装信息 */
-  getInfo: () => { config: string; log: string; },
+  getInfo: () => { config: string; log: string; };
+  /** 获取页面加载失败或崩溃的信息 */
+  getFailedInfo: ()=> unknown[];
 
-  env: string; // 当前配置环境
-  query: { [k: string]: string }; // url查询参数
+  setEnv: (val:string) => void;
+  /** 当前配置环境 */
+  env: string;
+  /** url查询参数 */
+  query: { [k: string]: string };
 
+  relaunch: ()=> void;
   delStore: (k: string) => void; // 删除某一个配置缓存，生产环境不可用
 }
 

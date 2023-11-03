@@ -8,5 +8,3 @@ document.addEventListener("DOMContentLoaded", ()=>{
         }
     })
 });
-
-window.RPBridge?.startup();

@@ -34,14 +34,14 @@ class CommonBrowser extends BrowserWindow {
   protected initEvent: { [k: string]: () => void } = {};
   protected viewMap = new Map<string, BrowserView>();
   protected bounds: Electron.Rectangle;
+  protected modalLoadingWindow: BrowserWindow;
+  protected failedInfo: unknown[] = [];
 
   public moduleName: WindowModule = WindowModule.Normal;
   public tag = MAIN_TAG_NAME;
   public url = '';
   /** view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
   public isLoaded = false;
-
-  protected modalLoadingWindow: BrowserWindow;
 
   constructor(options: Options = {}) {
     super({
@@ -84,21 +84,10 @@ class CommonBrowser extends BrowserWindow {
   //     this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
   // }
 
-  load(url?: string) {
-    Logger.info('[CommonBrowser -> load]', url);
-    if (!url) {
-      return;
-    }
-    if (url.startsWith('http:')|| url.startsWith('file:')) {
-      this.webContents.loadURL(url);
-    } else {
-      this.webContents.loadFile(url);
-    }
-  }
-
-  view(url: string, { referrer }: Partial<LoadContentOptions> = {}) {
+  view(url: string, opts: LoadContentOptions = {}):boolean {
     if(this.isLoaded){
-      return;
+      Logger.info('[CommonBrowser -> view|load]', `【${this.moduleName}】模块窗口已经载入过！！！`, );
+      return false;
     }
     this.url = url;
     const [urlSite, urlSearch = ''] = url.split('?');
@@ -107,16 +96,18 @@ class CommonBrowser extends BrowserWindow {
     for (const [key, value] of new URLSearchParams(urlSearch).entries()) {
       query[key] = encodeURIComponent(value);
     }
-    if(referrer){
-      query['rp_referrer'] = encodeURIComponent(referrer);
-    }
+
+    Object.keys(opts).forEach(k=>{
+      query[`__rp_${k}`] = encodeURIComponent(opts[k]);
+    });
 
     const newQuery = Object.entries(query).map( ([k ,v])=> `${k}=${v}` ).join('&');
     const newUrl = [urlSite].concat(newQuery?[newQuery]:[]).join('?');
-    Logger.info('[CommonBrowser -> view]', `【${this.moduleName}】`, this.webContents.getURL(), newUrl, newQuery);
+    const hasUrl = this.webContents.getURL() === newUrl;
+    Logger.info('[CommonBrowser -> view]', `【${this.moduleName}】`, `地址已存在：${hasUrl}`,newUrl, newQuery);
 
-    if(this.webContents.getURL() === newUrl){
-      return;
+    if(hasUrl){
+      return false;
     }
 
     if (newUrl.startsWith('http:') || newUrl.startsWith('file:')) {
@@ -127,9 +118,23 @@ class CommonBrowser extends BrowserWindow {
       this.webContents.loadFile(newUrl);
     }
     this.isLoaded = true;
+    return true;
   }
 
-  tabView(url?: string, { referrer }: Partial<LoadContentOptions> = {}) {
+  /** 
+   * 覆盖原始方法 
+   * @return boolean 返回false表示窗口存在并载入了url
+   */
+  reload(url?:string, query: LoadContentOptions = {}): void {
+    if(!url){
+      this.webContents.reload()
+    }else{
+      this.isLoaded = false;
+      this.view(url, query);
+    }
+  }
+
+  tabView(url?: string, { referrer }:LoadContentOptions = {}) {
     if (!url) {
       Logger.info('[CommonBrowser -> tabView]', 'url为空, 无法加载');
       return;
@@ -217,15 +222,27 @@ class CommonBrowser extends BrowserWindow {
       Logger.info(
         '[CommonBrowser -> initContentsEvent] did-fail-load',
         `【${this.moduleName}】`,
-        '页面错误/崩溃',
-        HTML_ERROR_CRASH_WEBPACK_ENTRY,
-        url,
+        `页面错误/崩溃地址：${url}`
       );
       if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url || !url) {
         return;
       }
+      // 如果是发生在启动页面，则需关闭启动Loading
+      if(this.moduleName === WindowModule.Login){
+        webContents.executeJavaScript(`window.RPBridge && window.RPBridge.startup()`,true).then(()=>{
+          Logger.info(
+            '[CommonBrowser -> initContentsEvent] did-fail-load',
+            `【${this.moduleName}】`,
+            `执行了脚本`
+          );
+        })
+      }
       this.show();
-      this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY, { referrer: `${url || ''}` });
+      if(!this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY, {referrer: url as string })){
+        this.reload(HTML_ERROR_CRASH_WEBPACK_ENTRY, {referrer: url as string });
+      }
+      this.failedInfo.push(args);
+      webContents.send(ChannelTypes.SetPageFailed, this.failedInfo);
     });
 
     webContents.on('console-message', (e, level, ...args: unknown[]) => {
@@ -304,12 +321,6 @@ class CommonBrowser extends BrowserWindow {
         'on:ready-to-show',
         `载入的URL地址：${this.webContents.getURL()}`,
       );
-
-      if (this.webContents.getURL() !== store.get('envConfig').domain) {
-        // this.show();
-        // this.moveTop();
-        // this.initEvent['ready-to-show']?.();
-      }
     });
 
     this.on('resize', () => {
@@ -326,6 +337,10 @@ class CommonBrowser extends BrowserWindow {
     this.on('show', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:show');
     });
+
+    this.on('unresponsive', ()=>{
+      Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】on:unresponsive`, '网页未响应');
+    })
 
     this.on('maximize', () => {
       Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:maximize', '窗口最大化');

@@ -11,10 +11,14 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+console.log(process.argv, process.argv0);
+
 Logger.info('*********************应用启动中************************');
 Logger.info(`安装目录：${app.getAppPath()} `);
 store.get('debug') && Logger.info(`配置文件：${store.path}`);
 store.get('debug') && Logger.info(`日志文件：${Logger.getFile()}`);
+
+process.env.version = app.getVersion();
 
 let startupBrowser: StartupBrowser;
 
@@ -34,7 +38,7 @@ const createIpcChannel = () => {
     }
     const newUrl = url || store.get('envConfig').home;
 
-    Logger.info('[APP] ipcMain ToHome', '跳转到首页', newUrl);
+    Logger.info('[APP] ipcMain:handle ToHome', `跳转到首页:${newUrl}`);
 
     if (!newUrl || typeof newUrl !== 'string') {
       Logger.info('[CommonBrowser -> view]', 'url为空, 无法加载');
@@ -243,6 +247,11 @@ const createIpcChannel = () => {
 
   ipcMain.on(ChannelTypes.ConsoleLogger, (e, ...args: unknown[]) => {
     Logger.info('[APP] 来自网页日志：', ...args);
+  });
+
+  ipcMain.on(ChannelTypes.Relaunch, ()=>{
+    app.quit();
+    app.relaunch();
   });
 };
 

@@ -6,7 +6,7 @@ import store, { IStore } from './store';
 import { PROGRAM_AUTHOR } from './constants';
 import Logger from './logger';
 
-console.info('⚠️当前环境变量为：' + store.get('env'));
+console.info('⚠️当前环境变量为：' + store.get('env'), process.env);
 const [, paramsStr] = window.location.href.split('?');
 const query: { [k: string]: string } = {};
 for (const [key, value] of new window.URLSearchParams(paramsStr).entries()) {
@@ -14,9 +14,18 @@ for (const [key, value] of new window.URLSearchParams(paramsStr).entries()) {
 }
 
 let windowMode = 'normal';
+const failedInfo:unknown[] = [];
 
 ipcRenderer.on(ChannelTypes.UpdateWindowMode, (e, mode) => {
   windowMode = mode;
+});
+
+ipcRenderer.on(ChannelTypes.SetPageFailed, (e, info)=>{
+  try {
+    failedInfo.concat(info);
+  } catch (error) {
+    //
+  }
 });
 
 const Bridge: RPBridge = {
@@ -91,7 +100,7 @@ const Bridge: RPBridge = {
   },
 
   showAbout: () => ipcRenderer.send(ChannelTypes.ShowAbout),
-  getVersion: () => process.env.npm_package_version,
+  getVersion: () => process.env.version,
   getAuthor: () => PROGRAM_AUTHOR,
 
   onMessage: <T>(fn:(...args:Array<T>)=>void)=> {
@@ -108,18 +117,21 @@ const Bridge: RPBridge = {
   } },
 
   query,
-
-  get env() {
-    return store.get('env');
-  },
-  set env(val: string) {
-    console.warn('⚠️注意：环境变量已发生改变，请重新启动程序');
+  env: store.get('env'),
+  setEnv(val: string) {
+    // console.warn('⚠️注意：环境变量已发生改变，请重新启动程序');
     store.set('env', val);
   },
 
   getViewMode() {
     return windowMode;
   },
+
+  getFailedInfo(){
+    return failedInfo;
+  },
+
+  relaunch: ()=> ipcRenderer.send(ChannelTypes.Relaunch),
 
   delStore: (k: string) => store.delete(k as keyof IStore),
 };

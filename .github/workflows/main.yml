@@ -5,6 +5,8 @@ on: # 监听 main 分支上的 push 事件
       - main
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  CSC_LINK: ./cert/mockplus.p12
+  CSC_KEY_PASSWORD: "123456"
 jobs:
   # build_on_mac:
   #   runs-on: macos-latest
@@ -34,23 +36,23 @@ jobs:
 
       - name: Publish Electron App
         run: npm run publish
-  # build_on_window:
-  #   runs-on: windows-latest
-  #   steps:
-  #     - name: Checkout
-  #       # uses: ver
-  #       uses: actions/checkout@v3.0.0
+  build_on_window:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        # uses: ver
+        uses: actions/checkout@v3.0.0
       
-  #     - name: Install Node
-  #       uses: actions/setup-node@v3.0.0
-  #       with:
-  #         node-version: 16
+      - name: Install Node
+        uses: actions/setup-node@v3.0.0
+        with:
+          node-version: 16
 
-  #     - name: Install dependencies
-  #       run: npm install
+      - name: Install dependencies
+        run: npm install
 
-  #     - name: Publish Electron App
-  #       run: npm run publish
+      - name: Publish Electron App
+        run: npm run publish
 
   # build_on_win-2019:
   #   runs-on: windows-2019

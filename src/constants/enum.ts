@@ -18,6 +18,7 @@ export enum ChannelTypes {
 
     SetWebStore = 'setWebStore',
     ResetStore = 'resetStoreAndRelaunch',
+    Relaunch = 'relaunch',
 
     CreateProject = 'createProject',
 
@@ -37,6 +38,7 @@ export enum ChannelTypes {
 
     GetTabViews = 'on:getTabViews',
     UpdateWindowMode = 'on:updateWindowMode',
+    SetPageFailed = 'on:SetPageFailed',
 }
 
 export enum MainChannelTypes{

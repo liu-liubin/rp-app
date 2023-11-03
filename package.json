@@ -1,14 +1,14 @@
 {
   "name": "rp-app",
   "productName": "摹客RP Bate",
-  "version": "5.0.3",
+  "version": "5.0.6",
   "description": "摹客RP BATE版本",
   "main": ".webpack/main",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "electron-forge start -- test",
     "win-start": "chcp 65001 && electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
+    "make": "electron-forge make --arch=x64,arm64",
     "make-win": "electron-forge make  ./ --platform=win32 --ignore=node_modules --arch=x64",
     "package-win": "electron-packager ./ --platform=win32 --out ./dist  --overwrite  --ignore=node_modules --arch=x64",
     "publish": "electron-forge publish",
