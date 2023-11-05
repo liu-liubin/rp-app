@@ -61,8 +61,9 @@ const builderOptions: Configuration = {
 }
 
 const config: ForgeConfig = {
-  // buildIdentifier: 'bate',
+  buildIdentifier: 'bate',
   packagerConfig: {
+    executableName: 'rp-app-bate',
     appBundleId: APPID,
     name: PRODUCT_NAME,
     asar: true,
