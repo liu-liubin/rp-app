@@ -9,11 +9,47 @@ declare const HTML_LOADING_WEBPACK_ENTRY: string;
 declare namespace NodeJS {
   interface Process {
     env: {
-      moduleName: string;
+      windowMode: string;
       version: string;
       windowId: string;
+      store: string;
+      web_env: string;
+      node_env: string;
     }
   }
+}
+
+declare interface EnvConfig {
+  /** 配置程序入口页面地址 */
+  domain: string; 
+  /** 记录程序首页 */
+  home: string;
+}
+
+declare interface StoreConfig {
+  lang: string;
+  browserOption?: Electron.BrowserWindowConstructorOptions;
+  version?: string;  // 安装版本，如果版本更新，则此值在安装并启动应用时更新该值
+  env: string;
+  debug: boolean;
+  webStore: {
+    [k:string]: unknown;
+  };
+  envConfig: Partial<EnvConfig>;
+  windowBounds:{[k:string]:Partial<Electron.Rectangle> |undefined};
+  //   env: any; // 当前环境 - 生产包仅读
+  //   envConfig?: any, // 环境配置 - 生产包仅读
+  //   envOrigin?:string; // 开发测试配置的地址 - 生产包无效
+  //   config?: {
+  //     dtDomain?: string;
+  //     iDocDomain?: string;
+  //     rpDomain?: string;
+  //   },
+  //   autoUpdateOrigin?: string; // 自动更新软件地址
+  //   publicOrigin?: string; // 企业发布地址源
+  //   publicPath?: string;  // 企业发布目录
+  //   installedUse?: boolean; // 是否第一次安裝并登錄使用過
+  //   webStore:Record<string,any>;
 }
 
 declare interface RPBridge {
@@ -71,7 +107,7 @@ declare interface RPBridge {
   /** 接收网页日志并记录到本机缓存中 */
   log: () => void;
   /** 获取程序安装信息 */
-  getInfo: () => { config: string; log: string; };
+  getInfo: () => { config?: string; log?: string; };
   /** 获取页面加载失败或崩溃的信息 */
   getFailedInfo: ()=> unknown[];
 

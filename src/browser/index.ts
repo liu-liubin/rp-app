@@ -56,12 +56,24 @@ class CommonBrowser extends BrowserWindow {
       },
     });
 
+    //注入变量
+    process.env.version = app.getVersion();
+    process.env.store = JSON.stringify(store.store);
+    process.env.windowId = `${this.id}`;
+    process.env.web_env = store.get('env');
+    process.env.windowMode = this.isMaximized()
+      ? 'maximize'
+      : this.isMinimized()
+      ? 'minimized'
+      : this.isFullScreen()
+      ? 'fullscreen'
+      : 'normal',
+
     this.modalLoadingWindow = new LoadingBrowser({
       parent: this,
       show: false,
     });
 
-    process.env.windowId = `${this.id}`;
     this.initBrowserEvent();
     this.initContentsEvent(this);
     this.bounds = this.getBounds();
@@ -246,7 +258,7 @@ class CommonBrowser extends BrowserWindow {
     });
 
     webContents.on('console-message', (e, level, ...args: unknown[]) => {
-      store.get('debug') && Logger.info(
+      store.get('debug') && (level===2||level==3) && Logger.info(
           '[CommonBrowser -> initContentsEvent]',
           `【${this.moduleName}】console-message`,
           webContents.getURL(),

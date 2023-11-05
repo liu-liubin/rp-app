@@ -11,14 +11,17 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-console.log(process.argv, process.argv0);
-
-Logger.info('*********************应用启动中************************');
+Logger.info('*********************应用启动中************************', process.argv);
 Logger.info(`安装目录：${app.getAppPath()} `);
 store.get('debug') && Logger.info(`配置文件：${store.path}`);
 store.get('debug') && Logger.info(`日志文件：${Logger.getFile()}`);
 
-process.env.version = app.getVersion();
+if(process.argv.find(v=>v==='prod')){
+  process.env.node_env = 'prod';
+  store.set('env', 'prod');
+}else{
+  process.env.node_env = 'test';
+}
 
 let startupBrowser: StartupBrowser;
 
@@ -174,14 +177,6 @@ const createIpcChannel = () => {
     win?.view(viewUrl);
   });
 
-  // 清空缓存并重启
-  ipcMain.on(ChannelTypes.ResetStore, () => {
-    Logger.info('[APP] ipcMain ResetStore', '清空缓存并重新启动');
-    store.clear();
-    app.quit();
-    app.relaunch();
-  });
-
   // ipcMain.on(ChannelTypes.Size, (e, moduleName: WindowModule, width: number, height: number) => {
   //   Logger.info('[APP] ipcMain size', '窗口改变大小', moduleName, width, height);
   //   const win = WindowManager.getWindow(moduleName);
@@ -253,6 +248,24 @@ const createIpcChannel = () => {
     app.quit();
     app.relaunch();
   });
+
+  // 清空缓存并重启
+  ipcMain.on(ChannelTypes.ResetStore, () => {
+    Logger.info('[APP] ipcMain:on ResetStore', '清空缓存并重新启动');
+    store.clear();
+    app.quit();
+    app.relaunch();
+  });
+
+  ipcMain.on(ChannelTypes.SetStore, (e, k, data)=> {
+    Logger.info('[APP] ipcMain:on SetStore', `设置缓存：${k}-${data}`);
+    store.set(k, data);
+  });
+
+  ipcMain.on(ChannelTypes.SetWebEnv, (e, val)=>{
+    store.set('env', val);
+  })
+
 };
 
 app.setAboutPanelOptions({

@@ -1,14 +1,14 @@
 {
   "name": "rp-app",
-  "productName": "摹客RP Bate",
-  "version": "5.0.6",
-  "description": "摹客RP BATE版本",
+  "productName": "RPBate",
+  "version": "5.0.3",
+  "description": "RP BATE",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start -- test",
     "win-start": "chcp 65001 && electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make --arch=x64,arm64",
+    "make": "electron-forge make",
     "make-win": "electron-forge make  ./ --platform=win32 --ignore=node_modules --arch=x64",
     "package-win": "electron-packager ./ --platform=win32 --out ./dist  --overwrite  --ignore=node_modules --arch=x64",
     "publish": "electron-forge publish",
@@ -16,8 +16,8 @@
   },
   "keywords": [],
   "author": {
-    "name": "Liubin",
-    "email": "liubinMac@qq.com"
+    "name": "Mockplus Technology Co.,Ltd.",
+    "email": "jongde.com@gmail.com"
   },
   "license": "MIT",
   "devDependencies": {
@@ -26,6 +26,7 @@
     "@electron-forge/maker-dmg": "^6.2.2",
     "@electron-forge/maker-rpm": "^6.2.1",
     "@electron-forge/maker-squirrel": "^6.2.1",
+    "@electron-forge/maker-wix": "^6.4.2",
     "@electron-forge/maker-zip": "^6.2.1",
     "@electron-forge/plugin-auto-unpack-natives": "^6.2.1",
     "@electron-forge/plugin-webpack": "^6.2.1",
@@ -35,12 +36,14 @@
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "css-loader": "^6.8.1",
     "electron": "25.2.0",
+    "electron-builder": "^24.6.4",
     "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
     "electron-winstaller": "^5.0.0",
     "eslint": "^8.44.0",
     "eslint-plugin-import": "^2.27.5",
     "fork-ts-checker-webpack-plugin": "^7.3.0",
+    "fs-extra": "^10.1.0",
     "node-loader": "^2.0.0",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.4",

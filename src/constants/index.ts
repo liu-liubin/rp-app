@@ -13,3 +13,5 @@ export const MAC_OS_CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X)
 export const WINDOW_CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
 
 export const PROGRAM_AUTHOR = 'Mockplus Technology Co.,Ltd.';
+export const PRODUCT_NAME = 'RPBate';
+export const APPID = 'com.app.mockplus.rp-app';

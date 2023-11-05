@@ -16,7 +16,7 @@ export enum ChannelTypes {
     ShowLoading = 'showLoading',
     CloseLoading = 'closeLoading',
 
-    SetWebStore = 'setWebStore',
+    SetStore = 'setStore',
     ResetStore = 'resetStoreAndRelaunch',
     Relaunch = 'relaunch',
 
@@ -28,6 +28,7 @@ export enum ChannelTypes {
     Restore = 'restore',
 
     ShowAbout = 'showAbout',
+    SetWebEnv = 'setWebEnv',
 
     Size = 'size',
 

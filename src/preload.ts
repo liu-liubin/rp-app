@@ -1,32 +1,33 @@
 // 在上下文隔离启用的情况下使用预加载
 import { contextBridge, ipcRenderer } from 'electron';
-// import { WindowModule } from './browser';
 import { ChannelTypes } from './constants/enum';
-import store, { IStore } from './store';
 import { PROGRAM_AUTHOR } from './constants';
-import Logger from './logger';
 
-console.info('⚠️当前环境变量为：' + store.get('env'), process.env);
+console.info('⚠️当前环境变量为：' , process.env);
 const [, paramsStr] = window.location.href.split('?');
 const query: { [k: string]: string } = {};
 for (const [key, value] of new window.URLSearchParams(paramsStr).entries()) {
   query[key] = decodeURIComponent(value);
 }
 
-let windowMode = 'normal';
 const failedInfo:unknown[] = [];
 
-ipcRenderer.on(ChannelTypes.UpdateWindowMode, (e, mode) => {
-  windowMode = mode;
-});
+const cacheData: {
+  store: Partial<StoreConfig>;
+  windowMode: string;
+  env: string;
+} = {
+  store: (()=>{
+    try {
+      return JSON.parse(process.env.store);
+    } catch (error) {
+      return {}
+    }
+  })(),
+  windowMode: process.env.windowMode,
+  env: process.env.web_env
+}
 
-ipcRenderer.on(ChannelTypes.SetPageFailed, (e, info)=>{
-  try {
-    failedInfo.concat(info);
-  } catch (error) {
-    //
-  }
-});
 
 const Bridge: RPBridge = {
   startup: () => ipcRenderer.invoke(ChannelTypes.Startup),
@@ -51,16 +52,21 @@ const Bridge: RPBridge = {
    * @returns
    */
   toHome: (url?: string) => ipcRenderer.invoke(ChannelTypes.ToHome, url),
-  setWebStore: (k: string, value: unknown, fn?: (res:{[k:string]:unknown})=>void) => {
-    store.set('webStore', {
-      ...store.get('webStore'),
-      [k]: value,
-    });
-    if(fn instanceof Function){
-      fn(store.get('webStore'));
+  setWebStore: (k: string, value: unknown) => {
+    // 临时存储 - web刷新消失
+    cacheData.store.webStore = {
+      ...(cacheData.store.webStore||{}),
+      [k]: value
     }
+    // 实际存储 - 永久
+    ipcRenderer.send(ChannelTypes.SetStore, 'webStore', cacheData.store.webStore);
+    // web共享 - web刷新可用
+    process.env.store = JSON.stringify(cacheData.store);
+    // if(fn instanceof Function){
+    //   fn(store.get('webStore'));
+    // }
   },
-  getWebStore: (k?: string) => (k ? store.get('webStore')[k] : store.get('webStore')),
+  getWebStore: (k?: string) => k ? cacheData.store.webStore?.[k] : cacheData.store.webStore,
   getTabViews: (fn) => {
     ipcRenderer.on(ChannelTypes.GetTabViews, (e, tab: string[]) => {
       fn && fn(tab);
@@ -68,7 +74,7 @@ const Bridge: RPBridge = {
   },
 
   resetStore: () => ipcRenderer.send(ChannelTypes.ResetStore),
-  getStore: () => store.store,
+  getStore: () => cacheData.store,
   logout: () => ipcRenderer.send(ChannelTypes.Logout),
   close: () => ipcRenderer.invoke(ChannelTypes.Close, process.env.windowId),
   closeAll: () => ipcRenderer.send(ChannelTypes.CloseAll),
@@ -89,12 +95,13 @@ const Bridge: RPBridge = {
 
   onWindowMode: (fn) => {
     ipcRenderer.on(ChannelTypes.UpdateWindowMode, (e, mode) => {
-      console.log('ChannelTypes.UpdateWindowMode', e, mode);
+      cacheData.windowMode = mode;
+      process.env.windowMode = mode;
       fn instanceof Function &&
         fn({
-          isMaximize: windowMode === 'maximize',
-          isFullscreen: windowMode === 'fullscreen',
-          isMinimize: windowMode === 'minimize',
+          isMaximize: mode === 'maximize',
+          isFullscreen: mode === 'fullscreen',
+          isMinimize: mode === 'minimize',
         });
     });
   },
@@ -112,20 +119,25 @@ const Bridge: RPBridge = {
 
   log:(...args:unknown[]) => ipcRenderer.send(ChannelTypes.ConsoleLogger, ...args),
   getInfo: () => { return { 
-    config: `${store.path}/config.json`,
-    log: Logger.getFile(),
+    // config: `${store.path}/config.json`,
+    // log: Logger.getFile(),
   } },
 
   query,
-  env: store.get('env'),
-  setEnv(val: string) {
-    // console.warn('⚠️注意：环境变量已发生改变，请重新启动程序');
-    store.set('env', val);
+  env:  cacheData.env, // 变更后需刷新
+  setEnv(val) {
+    if(!val){
+      return;
+    }
+    if(process.env.node_env === 'prod'){
+      console.log('当前不支持配置环境')
+      return;
+    }
+    process.env.web_env = val;
+    ipcRenderer.send(ChannelTypes.SetWebEnv, val);
   },
 
-  getViewMode() {
-    return windowMode;
-  },
+  getViewMode: ()=> cacheData.windowMode,
 
   getFailedInfo(){
     return failedInfo;
@@ -133,7 +145,9 @@ const Bridge: RPBridge = {
 
   relaunch: ()=> ipcRenderer.send(ChannelTypes.Relaunch),
 
-  delStore: (k: string) => store.delete(k as keyof IStore),
+  delStore: () => { 
+    // 
+  } // store.delete(k as keyof IStore),
 };
 
 contextBridge.exposeInMainWorld('RPBridge', Bridge);

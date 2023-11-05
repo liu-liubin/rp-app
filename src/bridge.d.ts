@@ -3,6 +3,5 @@ declare interface Window {
 }
 
 interface LoadContentOptions {
-  referrer?: string;
   [k:string]: string|number|boolean;
 }

@@ -9,11 +9,12 @@ rules.push({
 });
 
 export const rendererConfig: Configuration = {
+  mode: 'none',
   module: {
     rules,
   },
   plugins,
   resolve: {
-    extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+    extensions: ['.js', '.ts', '.jsx', '.tsx'],
   },
 };
