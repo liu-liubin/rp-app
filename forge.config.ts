@@ -89,7 +89,6 @@ const builderOptions: Configuration = {
     "target": ["deb", "rpm"] 
   },
   "deb": {
-    "priority": "optional",
     "icon": "./src/assets/icons/icon.png"
   }
 }
@@ -140,7 +139,7 @@ const config: ForgeConfig = {
     //   icon: './src/assets/icons/icon.icns',
     //   format: 'ULFO'
     // }),
-    new MakerZIP({ }, ['darwin', 'linux', 'win32']), 
+    new MakerZIP({ }, ['darwin', 'win32']), 
     // new MakerRpm({}), 
     // new MakerDeb({
     //   options: {

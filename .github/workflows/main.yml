@@ -8,20 +8,20 @@ env:
   # CSC_LINK: ./cert/mockplus.p12
   # CSC_KEY_PASSWORD: "123456"
 jobs:
-  build_on_mac:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3.0.0
+  # build_on_mac:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3.0.0
       
-      - name: Install Node
-        uses: actions/setup-node@v3.0.0
+  #     - name: Install Node
+  #       uses: actions/setup-node@v3.0.0
 
-      - name: Install dependencies
-        run: npm install 
+  #     - name: Install dependencies
+  #       run: npm install 
 
-      - name: Publish Electron App
-        run: npm run publish
+  #     - name: Publish Electron App
+  #       run: npm run publish
   # build_on_mac_11:
   #   runs-on: macos-11
   #   steps:
@@ -78,6 +78,8 @@ jobs:
       
       - name: Install Node
         uses: actions/setup-node@v3.0.0
+        with:
+          node-version: 18
 
       - name: Install dependencies
         run: npm install
