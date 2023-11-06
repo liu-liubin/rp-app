@@ -128,10 +128,12 @@ const config: ForgeConfig = {
   },
   hooks: {
     preMake: async () => {
-      build({
-        // targets: Platform.WINDOWS.,
-        config: builderOptions
-      })
+      if(process.platform !== 'linux'){
+        build({
+          // targets: Platform.WINDOWS.,
+          config: builderOptions
+        });
+      }
     }
   },
   rebuildConfig: {},
