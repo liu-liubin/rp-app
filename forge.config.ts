@@ -90,7 +90,6 @@ const builderOptions: Configuration = {
   },
   "deb": {
     "priority": "optional",
-    "afterInstall":"installer/linux/after-install.tpl",
     "icon": "./src/assets/icons/icon.png"
   }
 }
