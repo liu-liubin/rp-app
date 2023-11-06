@@ -1,7 +1,7 @@
 // 在上下文隔离启用的情况下使用预加载
 import { contextBridge, ipcRenderer } from 'electron';
 import { ChannelTypes } from './constants/enum';
-import { PROGRAM_AUTHOR } from './constants';
+import { PRODUCT_AUTHOR } from './constants';
 
 console.info('⚠️当前环境变量为：' , process.env);
 const [, paramsStr] = window.location.href.split('?');
@@ -108,7 +108,7 @@ const Bridge: RPBridge = {
 
   showAbout: () => ipcRenderer.send(ChannelTypes.ShowAbout),
   getVersion: () => process.env.version,
-  getAuthor: () => PROGRAM_AUTHOR,
+  getAuthor: () => PRODUCT_AUTHOR,
 
   onMessage: <T>(fn:(...args:Array<T>)=>void)=> {
     ipcRenderer.on(ChannelTypes.Message, (e, ...items:T[])=>{

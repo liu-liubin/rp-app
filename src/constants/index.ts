@@ -1,3 +1,5 @@
+import packageJson from '../../package.json';
+
 export const isPrivate = false;
 
 export const HOME_BROWSER_MIN_WIDTH = 500;
@@ -12,6 +14,6 @@ export const LOADING_WINDOW_HEIGHT = 96;
 export const MAC_OS_CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
 export const WINDOW_CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
 
-export const PROGRAM_AUTHOR = 'Mockplus Technology Co.,Ltd.';
-export const PRODUCT_NAME = 'RPBate';
-export const APPID = 'com.app.mockplus.rp-app';
+export const PRODUCT_AUTHOR = 'Mockplus Technology Co.,Ltd.';
+export const PRODUCT_NAME = packageJson.author.name;
+export const APPID = packageJson.appId;

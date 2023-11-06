@@ -1,8 +1,9 @@
 {
   "name": "rp-app",
-  "productName": "RPBate",
-  "version": "5.0.3",
-  "description": "RP BATE",
+  "productName": "摹客RP-bate",
+  "appId": "com.app.mockplus.rp-app",
+  "version": "5.0.0",
+  "description": "摹客RP-高效易用的在线原型设计工具",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start -- test",

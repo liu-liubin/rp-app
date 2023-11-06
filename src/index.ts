@@ -3,7 +3,7 @@ import store from './store';
 import { ChannelTypes } from './constants/enum';
 import WindowManager, { StartupBrowser, WindowModule } from './browser';
 import Logger from './logger';
-import { PROGRAM_AUTHOR } from './constants';
+import { PRODUCT_AUTHOR } from './constants';
 // import logoImg from './assets/images/logo.png';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -289,7 +289,7 @@ app.setAboutPanelOptions({
   applicationName: app.getName(),
   applicationVersion: app.getVersion(),
   version: app.getVersion(),
-  copyright: PROGRAM_AUTHOR,
+  copyright: PRODUCT_AUTHOR,
   iconPath: './assets/images/logo.png',
 });
 

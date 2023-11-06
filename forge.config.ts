@@ -2,9 +2,9 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 // import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 // import { MakerWix } from '@electron-forge/maker-wix';
 import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
-import { MakerRpm } from '@electron-forge/maker-rpm';
-import { MakerDMG } from '@electron-forge/maker-dmg';
+// import { MakerDeb } from '@electron-forge/maker-deb';
+// import { MakerRpm } from '@electron-forge/maker-rpm';
+// import { MakerDMG } from '@electron-forge/maker-dmg';
 // import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 
@@ -16,12 +16,14 @@ import {Configuration, build, } from "electron-builder";
 const builderOptions: Configuration = {
   "appId": APPID,
   "productName": PRODUCT_NAME,
+  "generateUpdatesFilesForAllChannels": true,
+  "artifactName": '${os}/${productName}-${arch}-${version}.${ext}', // 生成的包名
   "electronDownload": {
     "mirror": "https://npm.taobao.org/mirrors/electron/"
   },
   "files": [".webpack/**/*"],
   "directories":{
-    "output": "out/win",
+    "output": "out/bate/builder",
     "buildResources": "installer/resources"
   },
   "win": {
@@ -48,25 +50,42 @@ const builderOptions: Configuration = {
     "installerHeaderIcon": "./src/assets/icons/icon.ico",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "rp"
+    // "shortcutName": "rp"
   },
-  // "mac": {
-  //   "icon": "./src/assets/icons/icon.icns",
-  // },
-  // "dmg": {
-  //   "backgroundColor": "#999",
-  //   "icon": "./src/assets/icons/icon.icns",
-  //   "sign": false
-  // }
+  "mac": {
+    "icon": "./src/assets/icons/icon.icns",
+    "category": "public.app-category.graphics-design",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"],
+      }
+    ]
+  },
+  "dmg": {
+    "backgroundColor": "#f2f2f2", // 安装窗口背景色
+    "window": {  // 安装窗口尺寸，以及文件显示的位置
+      "x": 10,
+      "y": 10,
+      "width": 420,
+      "height": 260
+    },
+    "icon": "./src/assets/icons/icon.icns",
+    "format": "ULFO", // 硬盘图片格式
+    "sign": false
+  },
+  "linux": {
+    "target": ["deb", "rpm"] 
+  },
 }
 
 const config: ForgeConfig = {
-  buildIdentifier: 'bate',
+  buildIdentifier: 'bate/forge',
   packagerConfig: {
     appBundleId: APPID,
     name: PRODUCT_NAME,
     asar: true,
-    icon: './src/assets/icons/icon',
+    icon: './src/assets/icons',
     osxSign: {
       // identity: 'Liu Song (7PZMT8T5KL)',
       // optionsForFile: ()=>{
@@ -85,17 +104,17 @@ const config: ForgeConfig = {
     // },
   },
   hooks: {
-    // preMake: async () => {
-    //   build({
-    //     // targets: Platform.WINDOWS.,
-    //     config: builderOptions
-    //   })
-    // }
+    preMake: async () => {
+      build({
+        // targets: Platform.WINDOWS.,
+        config: builderOptions
+      })
+    }
   },
   rebuildConfig: {},
   makers: [
     // new MakerSquirrel({
-    //   authors: PROGRAM_AUTHOR,
+    //   authors: PRODUCT_AUTHOR,
     //   noMsi: false,
     //   description: 'mockplus rp',
     //   certificateFile: './cert/mockplus.pfx',
