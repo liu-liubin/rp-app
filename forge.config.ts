@@ -97,6 +97,7 @@ const config: ForgeConfig = {
   buildIdentifier: 'bate/forge',
   packagerConfig: {
     appBundleId: APPID,
+    executableName: "rp-app",
     name: PRODUCT_NAME,
     asar: true,
     icon: './src/assets/icons',
