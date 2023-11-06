@@ -16,6 +16,7 @@ import {Configuration, build } from "electron-builder";
 const builderOptions: Configuration = {
   "appId": APPID,
   "productName": PRODUCT_NAME,
+  "executableName": APP_NAME,
   "generateUpdatesFilesForAllChannels": true,
   "artifactName": '${os}/${productName}-${arch}-${version}.${ext}', // 生成的包名
   "electronDownload": {
@@ -85,19 +86,19 @@ const builderOptions: Configuration = {
     "format": "ULFO", // 硬盘图片格式
     "sign": false
   },
-  // "linux": {
-  //   "icon": '',
-  //   "desktop": {
-  //     "StartupNotify": "false",
-  //     "Encoding": "UTF-8",
-  //     "MimeType": "x-scheme-handler/deeplink"
-  //   },
-  //   "target": ["deb"] 
-  // },
-  // "deb": {
-  //   "priority": "optional",
-  //   "icon": "./src/assets/icons/icon.png"
-  // }
+  "linux": {
+    "icon": '',
+    "desktop": {
+      "StartupNotify": "false",
+      "Encoding": "UTF-8",
+      "MimeType": "x-scheme-handler/deeplink"
+    },
+    "target": ["deb"] 
+  },
+  "deb": {
+    "priority": "optional",
+    "icon": "./src/assets/icons/icon.png"
+  }
 }
 
 const config: ForgeConfig = {
