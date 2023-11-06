@@ -2,7 +2,7 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 // import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 // import { MakerWix } from '@electron-forge/maker-wix';
 import { MakerZIP } from '@electron-forge/maker-zip';
-// import { MakerDeb } from '@electron-forge/maker-deb';
+import { MakerDeb } from '@electron-forge/maker-deb';
 // import { MakerRpm } from '@electron-forge/maker-rpm';
 // import { MakerDMG } from '@electron-forge/maker-dmg';
 // import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
@@ -119,10 +119,10 @@ const config: ForgeConfig = {
   },
   hooks: {
     preMake: async () => {
-      build({
-        // targets: Platform.WINDOWS.,
-        config: builderOptions
-      })
+      // build({
+      //   // targets: Platform.WINDOWS.,
+      //   config: builderOptions
+      // })
     }
   },
   rebuildConfig: {},
@@ -141,11 +141,11 @@ const config: ForgeConfig = {
     // }),
     new MakerZIP({ }), 
     // new MakerRpm({}), 
-    // new MakerDeb({
-    //   options: {
-    //     icon: './src/assets/icons/icon.png',
-    //   }
-    // })
+    new MakerDeb({
+      options: {
+        icon: './src/assets/icons/icon.png',
+      }
+    })
   ],
   publishers: [
     {
