@@ -98,7 +98,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: APPID,
     name: PRODUCT_NAME,
-    executableName: 'rp',
+    executableName: '摹客RP-bate',
     asar: true,
     icon: './src/assets/icons',
     osxSign: {
