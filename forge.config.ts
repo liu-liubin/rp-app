@@ -86,7 +86,7 @@ const builderOptions: Configuration = {
       "Encoding": "UTF-8",
       "MimeType": "x-scheme-handler/deeplink"
     },
-    "target": ["deb", "rpm"] 
+    "target": ["deb"] 
   },
   "deb": {
     "icon": "./src/assets/icons/icon.png"
