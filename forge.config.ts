@@ -98,7 +98,6 @@ const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: APPID,
     name: PRODUCT_NAME,
-    executableName: '摹客RP-bate',
     asar: true,
     icon: './src/assets/icons',
     osxSign: {
@@ -119,12 +118,12 @@ const config: ForgeConfig = {
     // },
   },
   hooks: {
-    preMake: async () => {
-      // build({
-      //   // targets: Platform.WINDOWS.,
-      //   config: builderOptions
-      // })
-    }
+    // preMake: async () => {
+    //   // build({
+    //   //   // targets: Platform.WINDOWS.,
+    //   //   config: builderOptions
+    //   // })
+    // }
   },
   rebuildConfig: {},
   makers: [
