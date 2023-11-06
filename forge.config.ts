@@ -102,17 +102,17 @@ const config: ForgeConfig = {
     //   certificatePassword: "Jongde@61367719",
     //   setupIcon: './src/assets/icons/icon.ico',
     // }), 
-    new MakerDMG({
-      icon: './src/assets/icons/icon.icns',
-      format: 'ULFO'
-    }),
+    // new MakerDMG({
+    //   icon: './src/assets/icons/icon.icns',
+    //   format: 'ULFO'
+    // }),
     new MakerZIP({ }, ['darwin', 'linux', 'win32']), 
-    new MakerRpm({}), 
-    new MakerDeb({
-      options: {
-        icon: './src/assets/icons/icon.png',
-      }
-    })
+    // new MakerRpm({}), 
+    // new MakerDeb({
+    //   options: {
+    //     icon: './src/assets/icons/icon.png',
+    //   }
+    // })
   ],
   publishers: [
     {
