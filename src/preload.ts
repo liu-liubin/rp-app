@@ -30,7 +30,7 @@ const cacheData: {
 
 
 const Bridge: RPBridge = {
-  startup: () => ipcRenderer.invoke(ChannelTypes.Startup),
+  startup: (auth) => ipcRenderer.invoke(ChannelTypes.StartupLoaded, auth),
 
   /**
    * 打开编辑器

@@ -63,13 +63,12 @@ const builderOptions: Configuration = {
 const config: ForgeConfig = {
   buildIdentifier: 'bate',
   packagerConfig: {
-    executableName: 'rp-app-bate',
     appBundleId: APPID,
     name: PRODUCT_NAME,
     asar: true,
     icon: './src/assets/icons/icon',
     osxSign: {
-      identity: 'Liu Song (7PZMT8T5KL)',
+      // identity: 'Liu Song (7PZMT8T5KL)',
       // optionsForFile: ()=>{
       //   return {
       //     entitlements: './cert/entitlements.mac.plist'
@@ -78,19 +77,19 @@ const config: ForgeConfig = {
       // export CSC_LINK=cert/mockplus.p12
       // export CSC_KEY_PASSWORD="123456"
     },
-    osxNotarize: {
-      tool: 'notarytool',
-      appleId: 'jongde.com@gmail.com',
-      appleIdPassword: 'rggl-xqaj-dpti-xzwa',
-      teamId: '7PZMT8T5KL'
-    },
+    // osxNotarize: {
+    //   tool: 'notarytool',
+    //   appleId: 'jongde.com@gmail.com',
+    //   appleIdPassword: 'rggl-xqaj-dpti-xzwa',
+    //   teamId: '7PZMT8T5KL'
+    // },
   },
   hooks: {
     preMake: async () => {
-      // build({
-      //   // targets: Platform.WINDOWS.,
-      //   config: builderOptions
-      // })
+      build({
+        // targets: Platform.WINDOWS.,
+        config: builderOptions
+      })
     }
   },
   rebuildConfig: {},

@@ -1,6 +1,6 @@
 export enum ChannelTypes {
-    /** 程序启动 */
-    Startup = 'startup',
+    /** 程序启动Loading */
+    StartupLoaded = 'startupLoaded',
 
     Token = 'token',
     ToPreview = 'toPreview',

@@ -53,8 +53,11 @@ declare interface StoreConfig {
 }
 
 declare interface RPBridge {
-  /** 程序启动 - 请确保在入口页面中调用, 通知页面加载成功并可以正常启动程序 */
-  startup: () => Promise<unknown>;
+  /** 
+   * 程序启动 - 请确保在入口页面中调用, 通知页面加载成功并可以正常启动程序 
+   * @auth  true则授权成功，并关闭登录授权页， false表示未授权并显示登录授权页
+   */
+  startup: (auth: boolean) => Promise<unknown>;
 
   /** 
    * 跳转到RP首页, 设置url， url为空则加载上一次所设置的url窗口 

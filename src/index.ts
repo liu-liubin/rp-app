@@ -19,6 +19,7 @@ store.get('debug') && Logger.info(`日志文件：${Logger.getFile()}`);
 if(process.argv.find(v=>v==='prod')){
   process.env.node_env = 'prod';
   store.set('env', 'prod');
+  store.set('debug', false);
 }else{
   process.env.node_env = 'test';
 }
@@ -29,6 +30,22 @@ const createIpcChannel = () => {
   ipcMain.on(ChannelTypes.Token, (...args) => {
     const [, token] = args;
     store.set('token', token);
+  });
+
+  /** 
+   * 程序启动 
+   *  - 启动完成需要关闭启动页进程窗口
+   * 注意： 请确保在启动页面调用
+   */
+  ipcMain.handle(ChannelTypes.StartupLoaded, (e, auth, ...args: unknown[]) => {
+    Logger.info('[APP] ipcMain:handle StartupLoaded', `启动页面已完成 - 是否授权成功：${auth}`, args);
+    if(auth){
+      WindowManager.getWindow(WindowModule.Login)?.close();
+    }else{
+      WindowManager.getWindow(WindowModule.Login)?.show();
+    }
+    startupBrowser && !startupBrowser.isDestroyed() && startupBrowser.close();
+    return true;
   });
 
   // 跳转到项目首页
@@ -55,7 +72,7 @@ const createIpcChannel = () => {
 
     return await new Promise((resolve) => {
       win?.on('ready-to-show', () => {
-        WindowManager.getWindow(WindowModule.Login)?.close();
+        Logger.info('[APP] ipcMain toHome', 'on:ready-to-show', '首页页面已准备就绪', url);
         resolve(true);
       });
     });
@@ -293,12 +310,6 @@ app.on('ready', () => {
   startupBrowser.on('ready-to-show', () => {
     startupBrowser.show();
     ipcMain.emit(ChannelTypes.ToLogin);
-  });
-
-  ipcMain.handle(ChannelTypes.Startup, (e, ...args: unknown[]) => {
-    Logger.info('[APP] ipcMain Startup', '启动页面已完成', args);
-    startupBrowser && !startupBrowser.isDestroyed() && startupBrowser.close();
-    return true;
   });
 });
 
