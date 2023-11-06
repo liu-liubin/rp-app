@@ -85,12 +85,12 @@ const config: ForgeConfig = {
     // },
   },
   hooks: {
-    preMake: async () => {
-      build({
-        // targets: Platform.WINDOWS.,
-        config: builderOptions
-      })
-    }
+    // preMake: async () => {
+    //   build({
+    //     // targets: Platform.WINDOWS.,
+    //     config: builderOptions
+    //   })
+    // }
   },
   rebuildConfig: {},
   makers: [
