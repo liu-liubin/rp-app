@@ -64,9 +64,15 @@ const builderOptions: Configuration = {
   },
   "dmg": {
     "backgroundColor": "#f2f2f2", // 安装窗口背景色
+    "contents": [
+      {
+        "x": 20,
+        "y": 60,
+        "type": "link",
+        "path": '/Applications'
+      }
+    ],
     "window": {  // 安装窗口尺寸，以及文件显示的位置
-      "x": 10,
-      "y": 10,
       "width": 420,
       "height": 260
     },
@@ -75,9 +81,16 @@ const builderOptions: Configuration = {
     "sign": false
   },
   "linux": {
+    "desktop": {
+      "StartupNotify": "false",
+      "Encoding": "UTF-8",
+      "MimeType": "x-scheme-handler/deeplink"
+    },
     "target": ["deb", "rpm"] 
   },
   "deb": {
+    "priority": "optional",
+    "afterInstall":"installer/linux/after-install.tpl",
     "icon": "./src/assets/icons/icon.png"
   }
 }
