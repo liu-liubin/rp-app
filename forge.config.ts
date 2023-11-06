@@ -88,9 +88,9 @@ const builderOptions: Configuration = {
     },
     "target": ["deb"] 
   },
-  "deb": {
-    "icon": "./src/assets/icons/icon.png"
-  }
+  // "deb": {
+  //   "icon": "./src/assets/icons/icon.png"
+  // }
 }
 
 const config: ForgeConfig = {
