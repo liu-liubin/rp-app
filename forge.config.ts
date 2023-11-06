@@ -139,7 +139,7 @@ const config: ForgeConfig = {
     //   icon: './src/assets/icons/icon.icns',
     //   format: 'ULFO'
     // }),
-    new MakerZIP({ }, ['darwin', 'win32']), 
+    new MakerZIP({ }), 
     // new MakerRpm({}), 
     // new MakerDeb({
     //   options: {
