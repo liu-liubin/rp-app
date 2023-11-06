@@ -15,5 +15,5 @@ export const MAC_OS_CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X)
 export const WINDOW_CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome';
 
 export const PRODUCT_AUTHOR = 'Mockplus Technology Co.,Ltd.';
-export const PRODUCT_NAME = packageJson.author.name;
+export const PRODUCT_NAME = packageJson.productName;
 export const APPID = packageJson.appId;

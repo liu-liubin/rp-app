@@ -77,6 +77,9 @@ const builderOptions: Configuration = {
   "linux": {
     "target": ["deb", "rpm"] 
   },
+  "deb": {
+    "icon": "./src/assets/icons/icon.png"
+  }
 }
 
 const config: ForgeConfig = {
