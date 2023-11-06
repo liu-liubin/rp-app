@@ -17,3 +17,4 @@ export const WINDOW_CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x6
 export const PRODUCT_AUTHOR = 'Mockplus Technology Co.,Ltd.';
 export const PRODUCT_NAME = packageJson.productName;
 export const APPID = packageJson.appId;
+export const APP_NAME = packageJson.name;

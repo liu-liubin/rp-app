@@ -3,101 +3,108 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 // import { MakerWix } from '@electron-forge/maker-wix';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
-// import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerRpm } from '@electron-forge/maker-rpm';
 // import { MakerDMG } from '@electron-forge/maker-dmg';
-import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+// import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
-import {APPID, PRODUCT_NAME} from './src/constants';
-// import {Configuration, build, } from "electron-builder";
+import {APPID, APP_NAME, PRODUCT_NAME} from './src/constants';
+import {Configuration, build } from "electron-builder";
 
-// const builderOptions: Configuration = {
-//   "appId": APPID,
-//   "productName": PRODUCT_NAME,
-//   "generateUpdatesFilesForAllChannels": true,
-//   "artifactName": '${os}/${productName}-${arch}-${version}.${ext}', // 生成的包名
-//   "electronDownload": {
-//     "mirror": "https://npm.taobao.org/mirrors/electron/"
-//   },
-//   "files": [".webpack/**/*"],
-//   "directories":{
-//     "output": "out/bate/builder",
-//     "buildResources": "installer/resources"
-//   },
-//   "win": {
-//     "icon": "./src/assets/icons/icon.ico",
-//     "signingHashAlgorithms": ["sha256"], // 签名文件需指定
-//     "certificateFile": "./cert/mockplus.pfx",  // 当 CSC_LINK (WIN_CSC_LINK) 变量无法使用时用它
-//     "certificatePassword": "Jongde@61367719",
-//     "target": [
-//       {
-//         "target": "nsis",
-//         "arch": [
-//           "x64",
-//           "ia32"
-//         ]
-//       }
-//     ]
-//   },
-//   "nsis": {
-//     "oneClick": false,
-//     "allowElevation": true,
-//     "allowToChangeInstallationDirectory": true,
-//     "installerIcon": "./src/assets/icons/icon.ico",
-//     "uninstallerIcon": "./src/assets/icons/icon.ico",
-//     "installerHeaderIcon": "./src/assets/icons/icon.ico",
-//     "createDesktopShortcut": true,
-//     "createStartMenuShortcut": true,
-//     // "shortcutName": "rp"
-//   },
-//   "mac": {
-//     "icon": "./src/assets/icons/icon.icns",
-//     "category": "public.app-category.graphics-design",
-//     "target": [
-//       {
-//         "target": "dmg",
-//         "arch": ["arm64", "x64"],
-//       }
-//     ]
-//   },
-//   "dmg": {
-//     "backgroundColor": "#f2f2f2", // 安装窗口背景色
-//     "contents": [
-//       {
-//         "x": 20,
-//         "y": 60,
-//         "type": "link",
-//         "path": '/Applications'
-//       }
-//     ],
-//     "window": {  // 安装窗口尺寸，以及文件显示的位置
-//       "width": 420,
-//       "height": 260
-//     },
-//     "icon": "./src/assets/icons/icon.icns",
-//     "format": "ULFO", // 硬盘图片格式
-//     "sign": false
-//   },
-//   "linux": {
-//     "desktop": {
-//       "StartupNotify": "false",
-//       "Encoding": "UTF-8",
-//       "MimeType": "x-scheme-handler/deeplink"
-//     },
-//     "target": ["deb"] 
-//   },
-//   // "deb": {
-//   //   "icon": "./src/assets/icons/icon.png"
-//   // }
-// }
+const builderOptions: Configuration = {
+  "appId": APPID,
+  "productName": PRODUCT_NAME,
+  "generateUpdatesFilesForAllChannels": true,
+  "artifactName": '${os}/${productName}-${arch}-${version}.${ext}', // 生成的包名
+  "electronDownload": {
+    "mirror": "https://npm.taobao.org/mirrors/electron/"
+  },
+  "files": [".webpack/**/*"],
+  "directories":{
+    "output": "out/bate/builder",
+    "buildResources": "installer/resources"
+  },
+  "win": {
+    "icon": "./src/assets/icons/icon.ico",
+    "signingHashAlgorithms": ["sha256"], // 签名文件需指定
+    "certificateFile": "./cert/mockplus.pfx",  // 当 CSC_LINK (WIN_CSC_LINK) 变量无法使用时用它
+    "certificatePassword": "Jongde@61367719",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64",
+          "ia32"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "./src/assets/icons/icon.ico",
+    "uninstallerIcon": "./src/assets/icons/icon.ico",
+    "installerHeaderIcon": "./src/assets/icons/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    // "shortcutName": "rp"
+  },
+  "mac": {
+    "icon": "./src/assets/icons/icon.icns",
+    "category": "public.app-category.graphics-design",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"],
+      }
+    ]
+  },
+  "dmg": {
+    "backgroundColor": "#f2f2f2", // 安装窗口背景色
+    "contents": [
+      {
+        x: 20,
+        y: 60,
+        type: "file"
+      },
+      {
+        x: 220,
+        y: 60,
+        type: "link",
+        path: "/Applications"
+      }
+    ],
+    "window": {  // 安装窗口尺寸，以及文件显示的位置
+      "width": 420,
+      "height": 260
+    },
+    "icon": "./src/assets/icons/icon.icns",
+    "format": "ULFO", // 硬盘图片格式
+    "sign": false
+  },
+  // "linux": {
+  //   "icon": '',
+  //   "desktop": {
+  //     "StartupNotify": "false",
+  //     "Encoding": "UTF-8",
+  //     "MimeType": "x-scheme-handler/deeplink"
+  //   },
+  //   "target": ["deb"] 
+  // },
+  // "deb": {
+  //   "priority": "optional",
+  //   "icon": "./src/assets/icons/icon.png"
+  // }
+}
 
 const config: ForgeConfig = {
   buildIdentifier: 'bate/forge',
   packagerConfig: {
+    executableName: APP_NAME,  // 注意：linux打包与package.json name保持一致
     appBundleId: APPID,
-    executableName: "rp-app",
     name: PRODUCT_NAME,
     asar: true,
     icon: './src/assets/icons',
@@ -119,12 +126,12 @@ const config: ForgeConfig = {
     // },
   },
   hooks: {
-    // preMake: async () => {
-    //   // build({
-    //   //   // targets: Platform.WINDOWS.,
-    //   //   config: builderOptions
-    //   // })
-    // }
+    preMake: async () => {
+      build({
+        // targets: Platform.WINDOWS.,
+        config: builderOptions
+      })
+    }
   },
   rebuildConfig: {},
   makers: [
@@ -140,8 +147,12 @@ const config: ForgeConfig = {
     //   icon: './src/assets/icons/icon.icns',
     //   format: 'ULFO'
     // }),
-    // new MakerZIP({ }), 
-    // new MakerRpm({}), 
+    new MakerZIP({ }), 
+    new MakerRpm({
+      options: {
+        icon: './src/assets/icons/icon.png',
+      }
+    }), 
     new MakerDeb({
       options: {
         icon: './src/assets/icons/icon.png',
@@ -161,7 +172,7 @@ const config: ForgeConfig = {
     }
   ],
   plugins: [
-    new AutoUnpackNativesPlugin({}),
+    // new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
       mainConfig,
       renderer: {
