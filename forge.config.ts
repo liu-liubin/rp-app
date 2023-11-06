@@ -98,6 +98,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: APPID,
     name: PRODUCT_NAME,
+    executableName: 'rp',
     asar: true,
     icon: './src/assets/icons',
     osxSign: {
