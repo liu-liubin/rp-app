@@ -1,6 +1,8 @@
 export enum ChannelTypes {
     /** 程序启动Loading */
     StartupLoaded = 'startupLoaded',
+    /** 配置或启动自动更新检测 */
+    StartAutoUpdater = 'startAutoUpdater',
 
     Token = 'token',
     ToPreview = 'toPreview',

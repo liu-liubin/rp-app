@@ -6,6 +6,8 @@ declare const HTML_ERROR_CRASH_WEBPACK_ENTRY: string;
 
 declare const HTML_LOADING_WEBPACK_ENTRY: string;
 
+declare const STATIC_LOGIN_WEBPACK_ENTRY: string;  // 登录地址
+
 declare namespace NodeJS {
   interface Process {
     env: {
@@ -58,6 +60,8 @@ declare interface RPBridge {
    * @auth  true则授权成功，并关闭登录授权页， false表示未授权并显示登录授权页
    */
   startup: (auth: boolean) => Promise<unknown>;
+  /** 设置自动更新/更新检测参数 */
+  startUpdater: (url:string, headers:{[k:string]:string}, auth:string)=>void;
 
   /** 
    * 跳转到RP首页, 设置url， url为空则加载上一次所设置的url窗口 

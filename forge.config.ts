@@ -7,31 +7,32 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 // import { MakerDMG } from '@electron-forge/maker-dmg';
 // import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
+import {Configuration, build } from "electron-builder"; // 由于使用fore打包mac window存在异常，因此使用此方案
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import {APPID, APP_NAME, PRODUCT_NAME} from './src/constants';
-import {Configuration, build } from "electron-builder";
 
 const builderOptions: Configuration = {
   "appId": APPID,
   "productName": PRODUCT_NAME,
   "executableName": APP_NAME,
   "generateUpdatesFilesForAllChannels": true,
-  "artifactName": '${os}/${productName}-${arch}-${version}.${ext}', // 生成的包名
+  "artifactName": '${productName}-${version}.${ext}', // 生成的包名 - 不可带路径
   "electronDownload": {
     "mirror": "https://npm.taobao.org/mirrors/electron/"
   },
   "files": [".webpack/**/*"],
   "directories":{
-    "output": "out/bate/builder",
+    "output": "out/bate/builder/${os}/${version}/${arch}",
     "buildResources": "installer/resources"
   },
   "win": {
     "icon": "./src/assets/icons/icon.ico",
     "signingHashAlgorithms": ["sha256"], // 签名文件需指定
-    "certificateFile": "./cert/mockplus.pfx",  // 当 CSC_LINK (WIN_CSC_LINK) 变量无法使用时用它
-    "certificatePassword": "Jongde@61367719",
+    // "certificateFile": "./cert/mockplus.pfx",  // 当 CSC_LINK (WIN_CSC_LINK) 变量无法使用时用它
+    // "certificatePassword": "Jongde@61367719",
+    "verifyUpdateCodeSignature": true,
     "target": [
       {
         "target": "nsis",
@@ -98,6 +99,10 @@ const builderOptions: Configuration = {
   "deb": {
     "priority": "optional",
     "icon": "./src/assets/icons/icon.png"
+  },
+  "publish": {
+    "provider": 'generic',
+    "url": "",
   }
 }
 
@@ -130,7 +135,6 @@ const config: ForgeConfig = {
     preMake: async () => {
       if(process.platform !== 'linux'){
         build({
-          // targets: Platform.WINDOWS.,
           config: builderOptions
         });
       }
@@ -210,6 +214,12 @@ const config: ForgeConfig = {
             html: './src/views/loading/index.html',
             js: './src/views/loading/index.ts',
             name: 'html_loading',
+            preload: {
+              js: './src/preload.ts',
+            },
+          },
+          {
+            name: 'static_login', // 占位 - 注入静态文件
             preload: {
               js: './src/preload.ts',
             },

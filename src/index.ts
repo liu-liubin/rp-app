@@ -1,17 +1,19 @@
-import { app, ipcMain } from 'electron';
+import path from 'path';
+import { app, ipcMain, nativeImage, Tray } from 'electron';
 import store from './store';
 import { ChannelTypes } from './constants/enum';
 import WindowManager, { StartupBrowser, WindowModule } from './browser';
 import Logger from './logger';
-import { PRODUCT_AUTHOR } from './constants';
-// import logoImg from './assets/images/logo.png';
+import { PRODUCT_AUTHOR, PRODUCT_NAME } from './constants';
+import AppUpdater from './AppUpdater';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-Logger.info('*********************应用启动中************************', process.argv);
+Logger.info('******************************************************');
+Logger.info('*********************应用启动中************************');
+Logger.info('******************************************************');
 Logger.info(`安装目录：${app.getAppPath()} `);
 store.get('debug') && Logger.info(`配置文件：${store.path}`);
 store.get('debug') && Logger.info(`日志文件：${Logger.getFile()}`);
@@ -39,6 +41,10 @@ const createIpcChannel = () => {
    */
   ipcMain.handle(ChannelTypes.StartupLoaded, (e, auth, ...args: unknown[]) => {
     Logger.info('[APP] ipcMain:handle StartupLoaded', `启动页面已完成 - 是否授权成功：${auth}`, args);
+
+    // 配置自动更新检查 - 在网页端注册配置
+    // ipcMain.emit(ChannelTypes.StartAutoUpdater, Event, 'http://192.168.0.144:8000', {}, `Bearer`);
+
     if(auth){
       WindowManager.getWindow(WindowModule.Login)?.close();
     }else{
@@ -48,8 +54,8 @@ const createIpcChannel = () => {
     return true;
   });
 
-  // 跳转到项目首页
-  ipcMain.handle(ChannelTypes.ToHome, async (e, url?: string) => {
+  // 跳转 - 到项目首页
+  ipcMain.handle(ChannelTypes.ToHome, async (e, windowId, url?: string) => {
     if (url) {
       store.set('envConfig', {
         ...store.get('envConfig'),
@@ -65,32 +71,41 @@ const createIpcChannel = () => {
       return;
     }
 
+    const fromWin = WindowManager.fromId(windowId);
+    fromWin?.showLoading();
+
     const win = WindowManager.create(WindowModule.Home);
+    
     if (win.url !== newUrl) {
-      win.view(newUrl);
+      win.reload(newUrl);
+    }
+
+    if(win.isLoaded){
+      fromWin?.closeLoading();
     }
 
     return await new Promise((resolve) => {
       win?.on('ready-to-show', () => {
         Logger.info('[APP] ipcMain toHome', 'on:ready-to-show', '首页页面已准备就绪', url);
+        fromWin.closeLoading();
         resolve(true);
       });
     });
   });
 
-  // 跳转到RP编辑器界面
-  ipcMain.handle(ChannelTypes.ToEditor, async (e, url: string, appID: string) => {
+  // 跳转 - 到RP编辑器界面
+  ipcMain.handle(ChannelTypes.ToEditor, async (e, windowId, url: string, appID: string) => {
     if (!url || typeof url !== 'string') {
       Logger.info('[CommonBrowser -> view]', 'url为空, 无法加载');
       return;
     }
 
-    const focusWindow = WindowManager.getFocusWindow();
-    focusWindow?.showLoading();
+    const fromWin = WindowManager.fromId(windowId);
+    fromWin?.showLoading();
 
     const win = WindowManager.create(WindowModule.Editor, appID);
     if (win.isLoaded) {
-      focusWindow?.closeLoading();
+      fromWin?.closeLoading();
       WindowManager.getWindow(WindowModule.Home)?.hide();
       return true;
     }
@@ -99,33 +114,33 @@ const createIpcChannel = () => {
     return await new Promise((resolve) => {
       win?.on('ready-to-show', () => {
         Logger.info('[APP] ipcMain ToEditor', 'on:ready-to-show', '编辑页面已准备就绪', url);
-        focusWindow?.closeLoading();
+        fromWin?.closeLoading();
         WindowManager.getWindow(WindowModule.Home)?.hide();
         resolve(true);
       });
     });
   });
 
-  // 跳转到RP预览界面
-  ipcMain.handle(ChannelTypes.ToPreview, async (e, url: string, appId?: string) => {
+  // 跳转 - 到RP预览界面
+  ipcMain.handle(ChannelTypes.ToPreview, async (e, windowId, url: string, appId?: string) => {
     if (!url || typeof url !== 'string') {
       Logger.info('[CommonBrowser -> view]', 'url为空, 无法加载');
       return;
     }
 
-    // const focusWindow = WindowManager.getFocusWindow();
-    // focusWindow?.showLoading();
+    const fromWin = WindowManager.fromId(windowId);
+    fromWin?.showLoading();
+
     const win = WindowManager.create(WindowModule.Preview, appId);
-    // if(win.isLoaded){
-    //   focusWindow?.closeLoading();
-    //   WindowManager.getWindow(WindowModule.Home)?.hide();
-    //   return true;
-    // }
+    if(win.isLoaded){
+      fromWin?.closeLoading();
+      return true;
+    }
     win.view(url);
 
     return await new Promise((resolve)=>{
       win?.on('ready-to-show', ()=>{
-        // focusWindow?.closeLoading();
+        fromWin?.closeLoading();
         // WindowManager.getWindow(WindowModule.Home)?.hide();
         resolve(true);
       });
@@ -139,21 +154,6 @@ const createIpcChannel = () => {
       const res = await win.webContents.capturePage();
       return res.toDataURL();
     }
-  });
-
-  // 退出登录
-  ipcMain.on(ChannelTypes.Logout, () => {
-    Logger.info('[APP] ipcMain Logout', '用户退出登录');
-    if (startupBrowser && !startupBrowser.isDestroyed()) {
-      Logger.info('[APP] ipcMain Logout', '程序正在退出并重新登录');
-      return;
-    }
-    WindowManager.closeAllWindow();
-    startupBrowser = new StartupBrowser();
-    startupBrowser.on('ready-to-show', () => {
-      startupBrowser.show();
-      ipcMain.emit(ChannelTypes.ToLogin);
-    });
   });
 
   // 关闭窗口
@@ -178,6 +178,27 @@ const createIpcChannel = () => {
     return true;
   });
 
+  // 退出登录
+  ipcMain.on(ChannelTypes.Logout, () => {
+    Logger.info('[APP] ipcMain Logout', '用户退出登录');
+    if (startupBrowser && !startupBrowser.isDestroyed()) {
+      Logger.info('[APP] ipcMain Logout', '程序正在退出并重新登录');
+      return;
+    }
+    WindowManager.closeAllWindow();
+    startupBrowser = new StartupBrowser();
+    startupBrowser.on('ready-to-show', () => {
+      startupBrowser.show();
+      ipcMain.emit(ChannelTypes.ToLogin);
+    });
+  });
+
+  ipcMain.on(ChannelTypes.StartAutoUpdater, (e, url, headers, auth)=>{
+    Logger.info('[APP] ipcMain:on StartAutoUpdater', `启动自动更新检查: ${url}-${headers}-${auth}`);
+    const updater = new AppUpdater();
+    updater.checkUpdate({url, headers, auth});
+  })  
+
   // 关闭所有窗口
   ipcMain.on(ChannelTypes.CloseAll, (e, bool = true) => {
     Logger.info('[APP] ipcMain CloseAll', `关闭/隐藏所有窗口: ${bool}`);
@@ -186,8 +207,8 @@ const createIpcChannel = () => {
 
   // 程序启动 / 打开登录窗口
   ipcMain.on(ChannelTypes.ToLogin, (e, url: string) => {
-    const viewUrl = url || store.get('envConfig').domain || MAIN_APP_WEBPACK_ENTRY.replace('main_app', 'static/main') || HTML_ERROR_WEBPACK_ENTRY;
-    Logger.info('[APP] ipcMain ToLogin', '程序启动 / 打开了登录窗口', `URL: ${viewUrl}`);
+    const viewUrl = url || store.get('envConfig').domain || STATIC_LOGIN_WEBPACK_ENTRY.replace('index.js', 'index.html') || HTML_ERROR_WEBPACK_ENTRY;
+    Logger.info('[APP] ipcMain ToLogin', '程序启动 / 打开了登录窗口', `URL: ${viewUrl}`, STATIC_LOGIN_WEBPACK_ENTRY);
     // 存在其他窗口则关闭，此时仅可保留一个登录窗口 , 注意： 确保登录页URL唯一
     //WindowManager.getAllWindow().forEach((win) => win.moduleName !== WindowModule.Login && win.close());
     const win = WindowManager.create(WindowModule.Login);
@@ -302,11 +323,15 @@ app.on('child-process-gone', (e, details)=>{
   app.quit();
 });
 
-app.on('ready', () => {
+app.on('ready', () => {  
   createIpcChannel();
 
-  startupBrowser = new StartupBrowser();
+  const icon = nativeImage.createFromPath(path.resolve(__dirname, 'images/icons/tray-icon.png'));
+  const iconTray = new Tray(icon);
+  iconTray.setToolTip(PRODUCT_NAME);
+  iconTray.setImage(icon);
 
+  startupBrowser = new StartupBrowser();
   startupBrowser.on('ready-to-show', () => {
     startupBrowser.show();
     ipcMain.emit(ChannelTypes.ToLogin);

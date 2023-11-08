@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+  <meta name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="renderer" content="webkit">
+  
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    <link rel="dns-prefetch" href="//img02.mockplus.cn">
+  
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      background-color: transparent;
+      overflow: hidden;
+    }
+
+    div {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* box-shadow: 0 12px 30px rgba(0, 0, 0, .16); */
+      border-radius: 8px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    div.light {
+      background-color: #fff;
+    }
+
+    div.dark {
+      background-color: #202735;
+    }
+
+    img {
+      width: 48px;
+      height: 48px;
+      -webkit-user-drag: none;
+    }
+  </style>
+  <script>
+    if (window.localStorage) {
+      var userLang = window.localStorage.getItem('mockplus_language');
+      if (userLang) {
+        try {
+          window.USER_LANG = userLang ? JSON.parse(userLang) : undefined;
+        } catch (e) {
+          window.USER_LANG = userLang.replace('"', '');
+        }
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div class="dark" id="app"></div>
+<script type="text/javascript" src="start-up.754ad7f2f403fdcc921c.js"></script></body>
+</html>

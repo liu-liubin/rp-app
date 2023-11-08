@@ -32,26 +32,28 @@ const cacheData: {
 const Bridge: RPBridge = {
   startup: (auth) => ipcRenderer.invoke(ChannelTypes.StartupLoaded, auth),
 
+  startUpdater: (url, headers, auth)=> ipcRenderer.send(ChannelTypes.StartAutoUpdater, url, headers, auth),
+
   /**
    * 打开编辑器
    * @param url
    * @param appID
    * @returns
    */
-  toEditor: (url: string, appID?: string) => ipcRenderer.invoke(ChannelTypes.ToEditor, url, appID),
+  toEditor: (url: string, appID?: string) => ipcRenderer.invoke(ChannelTypes.ToEditor, process.env.windowId, url, appID),
   /**
    * 打开演示
    * @param url
    * @param appID
    * @returns
    */
-  toPreview: (url: string, appID?: string) => ipcRenderer.invoke(ChannelTypes.ToPreview, url, appID),
+  toPreview: (url: string, appID?: string) => ipcRenderer.invoke(ChannelTypes.ToPreview,process.env.windowId, url, appID),
   /**
    * 打开项目管理页
    * @param url
    * @returns
    */
-  toHome: (url?: string) => ipcRenderer.invoke(ChannelTypes.ToHome, url),
+  toHome: (url?: string) => ipcRenderer.invoke(ChannelTypes.ToHome,process.env.windowId, url),
   setWebStore: (k: string, value: unknown) => {
     // 临时存储 - web刷新消失
     cacheData.store.webStore = {

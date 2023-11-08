@@ -1,0 +1,3 @@
+environment:
+  CSC_LINK: ./cert/mockplus.pfx
+  CSC_KEY_PASSWORD: Jongde@61367719

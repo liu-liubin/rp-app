@@ -1,4 +1,4 @@
-import { info, error, warn, debug, transports } from 'electron-log';
+import Log, { info, error, warn, debug, transports } from 'electron-log';
 
 /**
  * 
@@ -20,5 +20,7 @@ class Logger {
     return transports.file.getFile().path;
   }
 }
+
+export {Log};
 
 export default Logger;

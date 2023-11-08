@@ -1,8 +1,8 @@
 {
   "name": "rp-app",
-  "productName": "摹客RP-bate",
+  "productName": "摹客RP",
   "appId": "com.app.mockplus.rp-app",
-  "version": "5.0.0",
+  "version": "5.0.0-beta",
   "description": "摹客RP-高效易用的在线原型设计工具",
   "main": ".webpack/main",
   "scripts": {
@@ -40,6 +40,7 @@
     "electron-builder": "^24.6.4",
     "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
+    "electron-updater": "^6.1.4",
     "electron-winstaller": "^5.0.0",
     "eslint": "^8.44.0",
     "eslint-plugin-import": "^2.27.5",

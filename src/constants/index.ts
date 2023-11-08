@@ -1,6 +1,6 @@
 import packageJson from '../../package.json';
 
-export const isPrivate = false;
+export const ENT_RELEASE = process.argv.findIndex(v=>v==='ent')!==-1; // 是否为企业级应用
 
 export const HOME_BROWSER_MIN_WIDTH = 500;
 export const HOME_BROWSER_MIN_HEIGHT = 350;

@@ -12,9 +12,12 @@ class CopyStatic {
     compiler.hooks.emit.tapAsync(
       'CopyStatic',
       (compilation:any, callback:any) => {
-        if(!fs.existsSync('./.webpack/renderer/static/')){
-          fs.copySync('./src/static/', './.webpack/renderer/static/', {recursive: true});
-        }
+        // if(!fs.existsSync('./.webpack/renderer/')){
+          fs.copySync('./src/static/renderer/', './.webpack/renderer/', {recursive: true});
+        // }
+        // if(!fs.existsSync('./.webpack/main/')){
+          fs.copySync('./src/static/main/', './.webpack/main/', {recursive: true});
+        // }
         callback();
       }
     );

@@ -1,10 +1,10 @@
-import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, app, shell } from 'electron';
+import { BrowserView, BrowserWindow, BrowserWindowConstructorOptions as Options, app, shell, screen } from 'electron';
 import {
   BROWSER_DEFAULT_HEIGHT,
   BROWSER_DEFAULT_WIDTH,
   HOME_BROWSER_MIN_HEIGHT,
   HOME_BROWSER_MIN_WIDTH,
-  isPrivate,
+  ENT_RELEASE,
   LOADING_WINDOW_HEIGHT,
   LOADING_WINDOW_WIDTH,
   MAC_OS_CHROME_USER_AGENT,
@@ -12,7 +12,7 @@ import {
 } from '../constants';
 import Logger from '../logger';
 import { ChannelTypes } from '../constants/enum';
-import store from '../store';
+import store, { memoryCache } from '../store';
 
 export enum WindowModule {
   Normal = 'normal',
@@ -34,7 +34,7 @@ class CommonBrowser extends BrowserWindow {
   protected initEvent: { [k: string]: () => void } = {};
   protected viewMap = new Map<string, BrowserView>();
   protected bounds: Electron.Rectangle;
-  protected modalLoadingWindow: BrowserWindow;
+  protected modalLoadingWindow: LoadingBrowser;
   protected failedInfo: unknown[] = [];
 
   public moduleName: WindowModule = WindowModule.Normal;
@@ -78,23 +78,6 @@ class CommonBrowser extends BrowserWindow {
     this.initContentsEvent(this);
     this.bounds = this.getBounds();
   }
-
-  // loading(){
-  //     Logger.info('[CommonBrowser -> loading]', this.loadingView, `窗口是否显示：${this.isVisible()}`);
-  //     if(this.loadingView){
-  //         this.setTopBrowserView(this.loadingView);
-  //         return;
-  //     }
-  //     this.loadingView = new BrowserView();
-  //     this.loadingView.setAutoResize({
-  //         width: true,
-  //         height: true,
-  //         vertical: true,
-  //         horizontal: true,
-  //     });
-  //     this.addBrowserView(this.loadingView);
-  //     this.loadingView.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
-  // }
 
   view(url: string, opts: LoadContentOptions = {}):boolean {
     if(this.isLoaded){
@@ -185,10 +168,12 @@ class CommonBrowser extends BrowserWindow {
     });
     
     this.modalLoadingWindow.show();
+    this.modalLoadingWindow.parentInsertCSS();
   }
 
   closeLoading() {
     this.modalLoadingWindow.hide();
+    this.modalLoadingWindow.parentRemoveCSS();
   }
 
   initContentsEvent(viewWindow: BrowserView | BrowserWindow) {
@@ -199,8 +184,6 @@ class CommonBrowser extends BrowserWindow {
       Logger.info(
         `[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready  show->URL:${webContents.getURL()}`,
       );
-
-      // this.show();
     });
 
     webContents.on('before-input-event', (event, input) => {
@@ -287,7 +270,7 @@ class CommonBrowser extends BrowserWindow {
 
     const defaultUserAgent =  process.platform === 'darwin' ? MAC_OS_CHROME_USER_AGENT : WINDOW_CHROME_USER_AGENT;
     const userAgent = webContents.getUserAgent() || defaultUserAgent;
-    webContents.setUserAgent(`${userAgent} mockRPD mockplusrp/${isPrivate ? 'ENT' : 'PUB'} bate`);
+    webContents.setUserAgent(`${userAgent} mockRPD mockplusrp/${ENT_RELEASE ? 'ENT' : 'PUB'} bate`);
 
     // 拦截window.open，并使用`系统默认浏览器跳转
     webContents.setWindowOpenHandler(({ url, referrer }) => {
@@ -318,11 +301,6 @@ class CommonBrowser extends BrowserWindow {
               : 'normal',
           );
         });
-
-        // this.modalLoadingWindow.show();
-
-        // TODO 待定！
-        // WindowManager.handleWindowReadyShow(this.moduleName, this.tag);
       }
     });
 
@@ -343,11 +321,25 @@ class CommonBrowser extends BrowserWindow {
     this.on('move', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
       this.bounds = this.getBounds();
+      memoryCache.displayCenterPositio = {
+        x: this.bounds.x + Math.round(this.bounds.width/2),
+        y: this.bounds.y + Math.round(this.bounds.height/2)
+      }
     });
 
     /** 系统窗口切换，最小化到恢复，都会触发该事件  */
     this.on('show', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:show');
+    });
+
+    /** 窗口获得焦点，创建窗口显示时也会触发 */
+    this.on('focus', () => {
+      store.get('debug') && Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus');
+      const {x, y, width, height} = this.getBounds();
+      memoryCache.displayCenterPositio = {
+        x: x + Math.round(width/2),
+        y: y + Math.round(height/2)
+      }
     });
 
     this.on('unresponsive', ()=>{
@@ -373,7 +365,6 @@ class CommonBrowser extends BrowserWindow {
     });
 
     // this.on('restore', ()=>{
-    //     console.log('restore',this.isFullScreen(), this.isMaximized(), this.isMinimized())
     //     // memoryCache.windowMode[this.moduleName] = 'normal';
     //     this.viewMap.forEach(view=>view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
     // })
@@ -477,24 +468,24 @@ class EditorBrowser extends CommonBrowser {
       minWidth: HOME_BROWSER_MIN_WIDTH,
       minHeight: HOME_BROWSER_MIN_HEIGHT,
       ...options,
-      ...EditorBrowser.getInitBounds(),
+      ...EditorBrowser.getInitBounds(options),
     });
 
     this.initEvent = this.getEvent();
   }
 
   // 创建新窗口时，偏移处理
-  static getInitBounds(){
-    const bounds = store.get('windowBounds')[`${WindowModule.Editor}`] || {};
+  static getInitBounds(options:Options){
+    const bounds = Object.assign({}, store.get('windowBounds')[`${WindowModule.Editor}`] || {}, options);
     const newBounds:Partial<Electron.Rectangle> =  {
       width: bounds.width ?? BROWSER_DEFAULT_WIDTH, 
       height: bounds.height ?? BROWSER_DEFAULT_HEIGHT
     }
     if(bounds.x){
-      newBounds.x =  bounds.x  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10
+      newBounds.x =  bounds.x  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10 // x偏移量
     }
     if(bounds.y){
-      newBounds.y =  bounds.y  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10
+      newBounds.y =  bounds.y  + (WindowManager.getModuleWindow(WindowModule.Editor)?.size ?? 0) * 10 // y偏移量
     }
     return newBounds;
   }
@@ -536,6 +527,7 @@ class PreviewBrowser extends CommonBrowser {
  * 注意： 作为模态窗口，显示/隐藏需要与父窗口同时设置
  */
 class LoadingBrowser extends BrowserWindow {
+  private cssKey:string[] = [];
   constructor(options: Options = {}) {
     super({
       width: LOADING_WINDOW_WIDTH,
@@ -561,14 +553,24 @@ class LoadingBrowser extends BrowserWindow {
     this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
 
     /** 针对mac的显示隐藏待优化 ===  */
-    this.on('show', async ()=>{
-      const parentContents =  this.getParentWindow()?.webContents;
-      const k = await (parentContents||this.webContents)?.insertCSS(`body,html{pointer-events:none;}`);
-      this.once('hide', ()=>{
-        const parentContents =  this.getParentWindow()?.webContents;
-        k && (parentContents||this.webContents)?.removeInsertedCSS(k);
-      })
-    })
+    // this.on('show', async ()=>{
+    //   const parentContents =  this.getParentWindow()?.webContents;
+    //   const k = await (parentContents||this.webContents)?.insertCSS(`body,html{pointer-events:none;}`);
+    //   this.once('hide', ()=>{
+    //     const parentContents =  this.getParentWindow()?.webContents;
+    //     k && (parentContents||this.webContents)?.removeInsertedCSS(k);
+    //   })
+    // })
+  }
+
+  async parentInsertCSS(){
+    const parentContents =  this.getParentWindow()?.webContents;
+    await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = 'pointer-events:none';`);
+  }
+
+  async parentRemoveCSS(){
+    const parentContents =  this.getParentWindow()?.webContents;
+    await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = '';`);
   }
 }
 
@@ -627,6 +629,36 @@ class WindowManager {
       return win;
     }
 
+    const extraDisplay = WindowManager.getExtraWindow();
+    const primaryDisplay =  screen.getPrimaryDisplay();
+    
+    const winBounds = store.get('windowBounds')[module];
+    if(winBounds){
+      Object.assign(options, winBounds);
+    }
+    // 存在外接屏幕
+    if(extraDisplay){
+      const xIsExtraFocus = extraDisplay.bounds.x > primaryDisplay.bounds.x && memoryCache.displayCenterPositio.x > extraDisplay.bounds.x;
+      const yIsExtraFocus = extraDisplay.bounds.y > primaryDisplay.bounds.y && memoryCache.displayCenterPositio.y > extraDisplay.bounds.y
+      if(xIsExtraFocus || yIsExtraFocus){
+        Object.assign(options, {
+          x: extraDisplay.bounds.x,
+          y: extraDisplay.bounds.y,
+        })
+      }else{
+        // delete options.x;
+        // delete options.y;
+      }
+    }else{
+      // 窗口的屏幕外，强制设置为0
+      const xOverflow = options.x && options.x > screen.getPrimaryDisplay().bounds.width;
+      const yOverflow = options.y && options.y > screen.getPrimaryDisplay().bounds.height;
+      if(xOverflow || yOverflow){
+        options.x = 0;
+        options.y = 0;
+      }
+    }    
+
     if (module === WindowModule.Login) {
       win = new LoginBrowser(options);
       this._loginBrowser = win;
@@ -648,6 +680,15 @@ class WindowManager {
     this.windowTagMap.get(module)?.set(tag, win);
     this.windowMap.set(`${win.id}`, win);
     return win;
+  }
+
+  static getExtraWindow(){
+    const displays = screen.getAllDisplays();
+    // 获取外接屏幕，当前只支持双屏
+    const externalDisplay = displays.find((display) => {
+      return display.bounds.x !== 0 || display.bounds.y !== 0
+    });
+    return externalDisplay;
   }
 
   static getWindow(module: WindowModule, tag: string = MAIN_TAG_NAME) {
