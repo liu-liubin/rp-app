@@ -34,21 +34,28 @@ class CommonBrowser extends BrowserWindow {
   protected initEvent: { [k: string]: () => void } = {};
   protected viewMap = new Map<string, BrowserView>();
   protected bounds: Electron.Rectangle;
-  protected modalLoadingWindow: LoadingBrowser;
   protected failedInfo: unknown[] = [];
+  protected loadingBrowserView: LoadingBrowserView | undefined; // 实验性功能
+
+  private _hide;
+  private _minimize;
 
   public moduleName: WindowModule = WindowModule.Normal;
+  public windowMode:'maximize'|'fullscreen'|'minimize'|'normal' = 'normal';
   public tag = MAIN_TAG_NAME;
   public url = '';
+  /** 标记 - 当窗口为隐藏状态时作为标记是否再次显示 ; 使用后请消除标记  */
+  public showAgain = false; 
   /** view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
   public isLoaded = false;
 
   constructor(options: Options = {}) {
     super({
+      title: '摹客RP',
+      titleBarStyle: 'hiddenInset',
       ...options,
       frame: false,
       show: false,
-      titleBarStyle: 'customButtonsOnHover',
       webPreferences: {
         ...(options.webPreferences || {}),
         nodeIntegration: true,
@@ -56,32 +63,32 @@ class CommonBrowser extends BrowserWindow {
       },
     });
 
+    this._hide = super.hide;
+    this._minimize = super.minimize;
+
+    this.windowMode = this.isMaximized()
+      ? 'maximize'
+      : this.isMinimized()
+      ? 'minimize'
+      : this.isFullScreen()
+      ? 'fullscreen'
+      : 'normal';
+
     //注入变量
     process.env.version = app.getVersion();
     process.env.store = JSON.stringify(store.store);
     process.env.windowId = `${this.id}`;
     process.env.web_env = store.get('env');
-    process.env.windowMode = this.isMaximized()
-      ? 'maximize'
-      : this.isMinimized()
-      ? 'minimized'
-      : this.isFullScreen()
-      ? 'fullscreen'
-      : 'normal',
-
-    this.modalLoadingWindow = new LoadingBrowser({
-      parent: this,
-      show: false,
-    });
+    process.env.windowMode = this.windowMode;
 
     this.initBrowserEvent();
     this.initContentsEvent(this);
-    this.bounds = this.getBounds();
+    this.bounds = this.getNormalBounds();
   }
 
   view(url: string, opts: LoadContentOptions = {}):boolean {
     if(this.isLoaded){
-      Logger.info('[CommonBrowser -> view|load]', `【${this.moduleName}】模块窗口已经载入过！！！`, );
+      Logger.info('[CommonBrowser -> view|load]', `【${this.moduleName}】模块窗口已经载入过！！！`);
       return false;
     }
     this.url = url;
@@ -99,13 +106,13 @@ class CommonBrowser extends BrowserWindow {
     const newQuery = Object.entries(query).map( ([k ,v])=> `${k}=${v}` ).join('&');
     const newUrl = [urlSite].concat(newQuery?[newQuery]:[]).join('?');
     const hasUrl = this.webContents.getURL() === newUrl;
-    Logger.info('[CommonBrowser -> view]', `【${this.moduleName}】`, `地址已存在：${hasUrl}`,newUrl, newQuery);
+    Logger.info('[CommonBrowser -> view]', `【${this.moduleName}】`, `${newUrl}加载的${hasUrl?'是':'不是'}同一个地址`, newQuery);
 
     if(hasUrl){
       return false;
     }
 
-    if (newUrl.startsWith('http:') || newUrl.startsWith('file:')) {
+    if (newUrl.startsWith('http') || newUrl.startsWith('file:')) {
       this.webContents.loadURL(newUrl, {
         httpReferrer: url,
       });
@@ -127,6 +134,22 @@ class CommonBrowser extends BrowserWindow {
       this.isLoaded = false;
       this.view(url, query);
     }
+  }
+
+  hide(): void {
+    // Mac 系统全屏模式不能隐藏或最小化
+    if(this.isFullScreen() && process.platform === 'darwin'){
+      return;
+    }
+    this._hide();
+  }
+
+  minimize(): void {
+    // Mac 系统全屏模式不能隐藏或最小化
+    if(this.isFullScreen() && process.platform === 'darwin'){
+      return;
+    }
+    this._minimize();
   }
 
   tabView(url?: string, { referrer }:LoadContentOptions = {}) {
@@ -157,23 +180,67 @@ class CommonBrowser extends BrowserWindow {
     }
   }
 
-  showLoading() {
-    const { x, y, width, height } = this.getBounds();
-    const { width: loadingWidth, height: loadingHeight } = this.modalLoadingWindow.getBounds();
-    this.modalLoadingWindow.setBounds({
-      x: x + Math.round((width - loadingWidth) / 2),
-      y: y + Math.round((height - loadingHeight) / 2),
-      width: loadingWidth,
-      height: loadingHeight,
+  async showLoading() {
+    if(!this.isVisible()){
+      return;
+    }
+
+    Logger.info('[CommonBrowser -> showLoading', `【${this.moduleName}】显示loading`);
+
+    this.loadingBrowserView  = new LoadingBrowserView()
+    this.addBrowserView(this.loadingBrowserView );
+    this.setTopBrowserView(this.loadingBrowserView );
+    this.loadingBrowserView .setAutoResize({
+      width: true,
+      height: true,
+      vertical: true,
+      horizontal: true,
     });
-    
-    this.modalLoadingWindow.show();
-    this.modalLoadingWindow.parentInsertCSS();
+    const [width, height] = this.getSize();
+    this.loadingBrowserView .setBounds({
+      x: 0,
+      y: 0,
+      width,
+      height,
+    });
+
+    // this.webContents.executeJavaScript(`
+    // var wrapper = document.createElement('div');
+    // wrapper.style.cssText = 'box-shadow:0 0 6px #333;border-radius: 6px;position:fixed;z-index:9999999999;left:50%;top:50%;transform:translate(-50%,-50%)';
+    // wrapper.setAttribute('id', '__rp_inject_wrapper')
+    // wrapper.innerHTML = \`
+    //   <style>
+    //   body,html{ pointer-events:none; }
+    //   .loading-img{
+    //       width: 96px;
+    //       height: 96px;
+    //       border-radius: 6px;
+    //       background-color: #202735;
+    //       background-image: url('${gifImg.toDataURL()}');
+    //       background-size: 50%;
+    //       background-position: center;
+    //       background-repeat: no-repeat;
+    //   }
+    //   </style>
+    //   <div class="loading-img"></div>
+    //   \`;
+    // document.body.appendChild(wrapper);
+    // `, true).catch(()=>{
+    //   // Logger.info('[CommonBrowser -> showLoading', `发生错误：${err}`);
+    // })
   }
 
-  closeLoading() {
-    this.modalLoadingWindow.hide();
-    this.modalLoadingWindow.parentRemoveCSS();
+  async closeLoading() {
+    if(!this.isVisible()){
+      return;
+    }
+    Logger.info('[CommonBrowser -> closeLoading', `【${this.moduleName}】关闭loading`);
+    this.loadingBrowserView  && this.removeBrowserView(this.loadingBrowserView );
+    // this.webContents.executeJavaScript(`
+    // document.body.removeChild(document.getElementById('__rp_inject_wrapper'));
+    // `, true).catch(()=>{
+    //   // Logger.info('[CommonBrowser -> closeLoading', `发生错误：${err}`);
+    // });
   }
 
   initContentsEvent(viewWindow: BrowserView | BrowserWindow) {
@@ -222,9 +289,12 @@ class CommonBrowser extends BrowserWindow {
       if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url || !url) {
         return;
       }
+      if(url && (url as string).indexOf(HTML_ERROR_CRASH_WEBPACK_ENTRY) !== -1){
+        return;
+      }
       // 如果是发生在启动页面，则需关闭启动Loading
       if(this.moduleName === WindowModule.Login){
-        webContents.executeJavaScript(`window.RPBridge && window.RPBridge.startup()`,true).then(()=>{
+        webContents.executeJavaScript(`window.MRPBridge && window.MRPBridge.startup()`,true).then(()=>{
           Logger.info(
             '[CommonBrowser -> initContentsEvent] did-fail-load',
             `【${this.moduleName}】`,
@@ -236,12 +306,10 @@ class CommonBrowser extends BrowserWindow {
       if(!this.view(HTML_ERROR_CRASH_WEBPACK_ENTRY, {referrer: url as string })){
         this.reload(HTML_ERROR_CRASH_WEBPACK_ENTRY, {referrer: url as string });
       }
-      this.failedInfo.push(args);
-      webContents.send(ChannelTypes.SetPageFailed, this.failedInfo);
     });
 
     webContents.on('console-message', (e, level, ...args: unknown[]) => {
-      store.get('debug') && (level===2||level==3) && Logger.info(
+      (level===2||level==3) && Logger.debug(
           '[CommonBrowser -> initContentsEvent]',
           `【${this.moduleName}】console-message`,
           webContents.getURL(),
@@ -287,6 +355,7 @@ class CommonBrowser extends BrowserWindow {
     this.once(BrowserWindowEvent.ReadyToShow, () => {
       Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
       if (this.moduleName !== WindowModule.Login) {
+      
         this.show();
         [this,...Array.from(this.viewMap.values())].forEach((view) => {
           view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys()));
@@ -295,7 +364,7 @@ class CommonBrowser extends BrowserWindow {
             this.isMaximized()
               ? 'maximize'
               : this.isMinimized()
-              ? 'minimized'
+              ? 'minimize'
               : this.isFullScreen()
               ? 'fullscreen'
               : 'normal',
@@ -315,13 +384,13 @@ class CommonBrowser extends BrowserWindow {
 
     this.on('resize', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
-      this.bounds = this.getBounds();
+      this.bounds = this.getNormalBounds();
     });
 
     this.on('move', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
-      this.bounds = this.getBounds();
-      memoryCache.displayCenterPositio = {
+      this.bounds = this.getNormalBounds();
+      memoryCache.displayCenterPosition = {
         x: this.bounds.x + Math.round(this.bounds.width/2),
         y: this.bounds.y + Math.round(this.bounds.height/2)
       }
@@ -332,11 +401,15 @@ class CommonBrowser extends BrowserWindow {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:show');
     });
 
+    this.on('hide', () => {
+      // 
+    });
+
     /** 窗口获得焦点，创建窗口显示时也会触发 */
     this.on('focus', () => {
-      store.get('debug') && Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus');
-      const {x, y, width, height} = this.getBounds();
-      memoryCache.displayCenterPositio = {
+      Logger.debug('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus');
+      const {x, y, width, height} = this.getNormalBounds();
+      memoryCache.displayCenterPosition = {
         x: x + Math.round(width/2),
         y: y + Math.round(height/2)
       }
@@ -348,18 +421,21 @@ class CommonBrowser extends BrowserWindow {
 
     this.on('maximize', () => {
       Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:maximize', '窗口最大化');
+      this.windowMode = 'maximize';
       this.webContents.send(ChannelTypes.UpdateWindowMode, 'maximize');
       this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'maximize'));
     });
 
     this.on('minimize', () => {
       Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:minimize', '窗口最小化');
+      this.windowMode = 'minimize';
       this.webContents.send(ChannelTypes.UpdateWindowMode, 'minimize');
       this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'minimize'));
     });
 
     this.on('unmaximize', () => {
       Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:unmaximize', '窗口取消最大化');
+      this.windowMode = 'normal';
       this.webContents.send(ChannelTypes.UpdateWindowMode, 'normal');
       this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
     });
@@ -370,23 +446,30 @@ class CommonBrowser extends BrowserWindow {
     // })
 
     this.on('enter-full-screen', () => {
-      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:enter-full-screen', '窗口进入全屏状态');
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:enter-full-screen', `【${this.moduleName}】窗口进入全屏状态`);
+      if(this.showAgain && this.windowMode !== 'fullscreen'){
+        this.showAgain = false;
+        this.setFullScreen(false);
+        return;
+      }
+      this.windowMode = 'fullscreen';
       this.webContents.send(ChannelTypes.UpdateWindowMode, 'fullscreen');
       this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'fullscreen'));
     });
 
     this.on('leave-full-screen', () => {
-      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:leave-full-screen', '窗口退出全屏状态');
+      Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:leave-full-screen', `【${this.moduleName}】窗口退出全屏状态`);
+      this.windowMode = 'normal';
       this.webContents.send(ChannelTypes.UpdateWindowMode, 'normal');
       this.viewMap.forEach((view) => view.webContents.send(ChannelTypes.UpdateWindowMode, 'normal'));
     });
 
     // 监听窗口关闭事件，接收到此事件时，需销毁对象引用关系；否则进程报错
-    this.on('closed', () => {
+    this.on('close', () => {
       Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'on:close');
 
       if (this.moduleName !== WindowModule.Login) {
-        store.set('windowBounds', {
+        this.windowMode!=='fullscreen' && store.set('windowBounds', {
           ...store.get('windowBounds'),
           [`${this.moduleName}`]: this.bounds,
         });
@@ -440,6 +523,8 @@ class LoginBrowser extends CommonBrowser {
       maximizable: false,
       fullscreenable: false,
       ...options,
+      show: false,
+      trafficLightPosition: { x: -20, y: -20 },
     });
 
     this.initEvent = {};
@@ -512,11 +597,9 @@ class PreviewBrowser extends CommonBrowser {
       show: false,
       minWidth: HOME_BROWSER_MIN_WIDTH,
       minHeight: HOME_BROWSER_MIN_HEIGHT,
-      fullscreenable: true,
-      fullscreen: true,
       ...options,
     });
-
+    this.maximize();
     // this.once('ready-to-show', () => {
     //   this.maximize();
     // });
@@ -526,51 +609,42 @@ class PreviewBrowser extends CommonBrowser {
 /**
  * 注意： 作为模态窗口，显示/隐藏需要与父窗口同时设置
  */
-class LoadingBrowser extends BrowserWindow {
-  private cssKey:string[] = [];
+class LoadingBrowserView extends BrowserView {
   constructor(options: Options = {}) {
     super({
-      width: LOADING_WINDOW_WIDTH,
-      height: LOADING_WINDOW_HEIGHT,
-      minWidth: LOADING_WINDOW_WIDTH,
-      minHeight: LOADING_WINDOW_HEIGHT,
-      resizable: false,
-      transparent: true,
-      alwaysOnTop: true,
-      frame: false,
-      show: false,
-      titleBarStyle: 'customButtonsOnHover',
-      trafficLightPosition: { x: -20, y: -20 },
-      webPreferences: {
-        nodeIntegration: true,
-        preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
-      },
+      // width: LOADING_WINDOW_WIDTH,
+      // height: LOADING_WINDOW_HEIGHT,
+      // minWidth: LOADING_WINDOW_WIDTH,
+      // minHeight: LOADING_WINDOW_HEIGHT,
+      // resizable: false,
+      // transparent: true,
+      // frame: false,
+      // show: false,
+      // titleBarStyle: 'hidden',
+      // trafficLightPosition: { x: -20, y: -20 },
+      // webPreferences: {
+      //   nodeIntegration: true,
+      //   preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
+      // },
       ...options,
     });
 
     Logger.info('[LoadingBrowser -> constructor] ', `Loading窗口：${HTML_LOADING_WEBPACK_ENTRY}`);
 
     this.webContents.loadURL(HTML_LOADING_WEBPACK_ENTRY);
+    // this.setBackgroundColor('rgba(0,0,0,0)');
+  
 
-    /** 针对mac的显示隐藏待优化 ===  */
-    // this.on('show', async ()=>{
-    //   const parentContents =  this.getParentWindow()?.webContents;
-    //   const k = await (parentContents||this.webContents)?.insertCSS(`body,html{pointer-events:none;}`);
-    //   this.once('hide', ()=>{
-    //     const parentContents =  this.getParentWindow()?.webContents;
-    //     k && (parentContents||this.webContents)?.removeInsertedCSS(k);
-    //   })
-    // })
   }
 
   async parentInsertCSS(){
-    const parentContents =  this.getParentWindow()?.webContents;
-    await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = 'pointer-events:none';`);
+    // const parentContents =  this.getParentWindow()?.webContents;
+    // await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = 'pointer-events:none';`);
   }
 
   async parentRemoveCSS(){
-    const parentContents =  this.getParentWindow()?.webContents;
-    await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = '';`);
+    // const parentContents =  this.getParentWindow()?.webContents;
+    // await (parentContents||this.webContents)?.executeJavaScript(`document.documentElement.style.cssText = '';`);
   }
 }
 
@@ -623,8 +697,13 @@ class WindowManager {
       '[WindowManager -> create]',
       `【${module}-${tag}】`,
       `窗口是否存在: ${!!win}`,
+      win?.windowMode
     );
     if (win) {
+      // 针对mac全屏切换窗口显示的优化处理
+      if(process.platform === 'darwin' && !win.isVisible()){
+        win.showAgain = true; 
+      }
       win.show();
       return win;
     }
@@ -638,8 +717,8 @@ class WindowManager {
     }
     // 存在外接屏幕
     if(extraDisplay){
-      const xIsExtraFocus = extraDisplay.bounds.x > primaryDisplay.bounds.x && memoryCache.displayCenterPositio.x > extraDisplay.bounds.x;
-      const yIsExtraFocus = extraDisplay.bounds.y > primaryDisplay.bounds.y && memoryCache.displayCenterPositio.y > extraDisplay.bounds.y
+      const xIsExtraFocus = extraDisplay.bounds.x > primaryDisplay.bounds.x && memoryCache.displayCenterPosition.x > extraDisplay.bounds.x;
+      const yIsExtraFocus = extraDisplay.bounds.y > primaryDisplay.bounds.y && memoryCache.displayCenterPosition.y > extraDisplay.bounds.y
       if(xIsExtraFocus || yIsExtraFocus){
         Object.assign(options, {
           x: extraDisplay.bounds.x,

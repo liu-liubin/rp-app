@@ -14,7 +14,7 @@ export interface IMemoryCache{
   windowMode: {
     [k: string]: 'minimize'|'maximize'|'fullscreen'|'normal'
   };
-  displayCenterPositio: {
+  displayCenterPosition: {
     x: number;
     y:number;
   }
@@ -37,7 +37,7 @@ const store = new Store<StoreConfig>({
 export const memoryCache:IMemoryCache = {
   tabViews: {},
   windowMode: {},
-  displayCenterPositio: {x:0, y: 0}
+  displayCenterPosition: {x:0, y: 0}
 };
 
 export default store;

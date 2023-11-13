@@ -1,5 +1,5 @@
 declare interface Window {
-  RPBridge?: RPBridge;
+  MRPBridge?: MRPBridge;
 }
 
 interface LoadContentOptions {

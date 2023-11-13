@@ -18,13 +18,13 @@ const builderOptions: Configuration = {
   "productName": PRODUCT_NAME,
   "executableName": APP_NAME,
   "generateUpdatesFilesForAllChannels": true,
-  "artifactName": '${productName}-${version}.${ext}', // 生成的包名 - 不可带路径
+  "artifactName": '${productName}-${arch}.${ext}', // 生成的包名 - 不可带路径
   "electronDownload": {
     "mirror": "https://npm.taobao.org/mirrors/electron/"
   },
   "files": [".webpack/**/*"],
   "directories":{
-    "output": "out/bate/builder/${os}/${version}/${arch}",
+    "output": "out/builder/${os}/${version}",
     "buildResources": "installer/resources"
   },
   "win": {
@@ -55,7 +55,7 @@ const builderOptions: Configuration = {
     // "shortcutName": "rp"
   },
   "mac": {
-    "icon": "./src/assets/icons/icon.icns",
+    "icon": "./src/assets/icons/icon.png",
     "category": "public.app-category.graphics-design",
     "target": [
       {
@@ -83,7 +83,7 @@ const builderOptions: Configuration = {
       "width": 420,
       "height": 260
     },
-    "icon": "./src/assets/icons/icon.icns",
+    "icon": "./src/assets/icons/icon.png",
     "format": "ULFO", // 硬盘图片格式
     "sign": false
   },
@@ -103,11 +103,14 @@ const builderOptions: Configuration = {
   "publish": {
     "provider": 'generic',
     "url": "",
+    // "provider": 'github',
+    // "repo": "rp-app",
+    // "owner": "liu-liubin"
   }
 }
 
 const config: ForgeConfig = {
-  buildIdentifier: 'bate/forge',
+  buildIdentifier: 'forge',
   packagerConfig: {
     executableName: APP_NAME,  // 注意：linux打包与package.json name保持一致
     appBundleId: APPID,

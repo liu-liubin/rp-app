@@ -29,7 +29,7 @@ const cacheData: {
 }
 
 
-const Bridge: RPBridge = {
+const Bridge: MRPBridge = {
   startup: (auth) => ipcRenderer.invoke(ChannelTypes.StartupLoaded, auth),
 
   startUpdater: (url, headers, auth)=> ipcRenderer.send(ChannelTypes.StartAutoUpdater, url, headers, auth),
@@ -93,7 +93,7 @@ const Bridge: RPBridge = {
   minimize: () => ipcRenderer.send(ChannelTypes.Minimize, process.env.windowId),
   maximize: () => ipcRenderer.send(ChannelTypes.Maximize, process.env.windowId),
   fullscreen: (flag = true) => ipcRenderer.send(ChannelTypes.Fullscreen, process.env.windowId, flag),
-  restore: () => ipcRenderer.send(ChannelTypes.Restore),
+  restore: () => ipcRenderer.send(ChannelTypes.Restore,  process.env.windowId,),
 
   onWindowMode: (fn) => {
     ipcRenderer.on(ChannelTypes.UpdateWindowMode, (e, mode) => {
@@ -152,4 +152,4 @@ const Bridge: RPBridge = {
   } // store.delete(k as keyof IStore),
 };
 
-contextBridge.exposeInMainWorld('RPBridge', Bridge);
+contextBridge.exposeInMainWorld('MRPBridge', Bridge);

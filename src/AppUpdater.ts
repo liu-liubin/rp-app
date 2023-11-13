@@ -1,7 +1,7 @@
 import { MessageBoxOptions, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
 import type {AppUpdater as ElectronAppUpdater, UpdateDownloadedEvent} from 'electron-updater';
-import Logger, { Log } from "./logger";
+import { Log } from "./logger";
 
 interface IInitOptions{
   url?:string;
@@ -13,7 +13,9 @@ export default class AppUpdater {
   private onAvailable: (bool:boolean)=>void;
 
   constructor() {
-    this.onAvailable = ()=>{};
+    this.onAvailable = ()=>{
+      // 
+    };
   }
 
   init(opts:IInitOptions = {}){
@@ -29,14 +31,17 @@ export default class AppUpdater {
 
 
     /** 检测更新 */
-    autoUpdater.on('checking-for-update',()=>{})
+    autoUpdater.on('checking-for-update',()=>{
+      // 
+    })
 
     /** 检测到更新错误 */
-    autoUpdater.on('error', (err) => {
+    autoUpdater.on('error', () => {
+      // 
     })
 
     /** 检测到有新的版本更新 */
-    autoUpdater.on('update-available', async (info: UpdateDownloadedEvent)=>{
+    autoUpdater.on('update-available', async ()=>{
       // this.canUpdate(info).then(()=>{
       //   this.onAvailable(true);
       // });
@@ -66,7 +71,7 @@ export default class AppUpdater {
       type: 'info',
       buttons: ['#重启', '#稍后重启'],
       title: '#版本更新',
-      message: process.platform === 'win32' ? info.releaseNotes as string : info.releaseName,
+      message: process.platform === 'win32' ? info.releaseNotes?.toString() ?? '' : info.releaseName || '',
       detail: '#有新的版本，请重启',
     }
     const returnValue = await dialog.showMessageBox(dialogOpts);
