@@ -46,7 +46,7 @@ class CommonBrowser extends BrowserWindow {
   public url = '';
   /** 标记 - 当窗口为隐藏状态时作为标记是否再次显示 ; 使用后请消除标记  */
   public showAgain = false; 
-  /** view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
+  /** 状态转变事件为webContents.dom-ready view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
   public isLoaded = false;
 
   constructor(options: Options = {}) {
@@ -119,7 +119,6 @@ class CommonBrowser extends BrowserWindow {
     } else {
       this.webContents.loadFile(newUrl);
     }
-    this.isLoaded = true;
     return true;
   }
 
@@ -251,6 +250,8 @@ class CommonBrowser extends BrowserWindow {
       Logger.info(
         `[CommonBrowser -> initContentsEvent] 【${this.moduleName}】 on:dom-ready  show->URL:${webContents.getURL()}`,
       );
+      this.isLoaded = true;
+      // this.show();
     });
 
     webContents.on('before-input-event', (event, input) => {
@@ -356,7 +357,7 @@ class CommonBrowser extends BrowserWindow {
       Logger.warn('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】`, 'once:ready-to-show');
       if (this.moduleName !== WindowModule.Login) {
       
-        this.show();
+        // this.show();
         [this,...Array.from(this.viewMap.values())].forEach((view) => {
           view.webContents.send(ChannelTypes.GetTabViews, Array.from(this.viewMap.keys()));
           view.webContents.send(
@@ -407,12 +408,12 @@ class CommonBrowser extends BrowserWindow {
 
     /** 窗口获得焦点，创建窗口显示时也会触发 */
     this.on('focus', () => {
-      Logger.debug('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus');
       const {x, y, width, height} = this.getNormalBounds();
       memoryCache.displayCenterPosition = {
         x: x + Math.round(width/2),
         y: y + Math.round(height/2)
       }
+      Logger.debug('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus', memoryCache.displayCenterPosition);
     });
 
     this.on('unresponsive', ()=>{
@@ -509,6 +510,26 @@ class CommonBrowser extends BrowserWindow {
       width,
       height,
     });
+  }
+
+  /**
+   * 钩子 **
+   * 当前窗口已经准备就绪，或者窗口渲染后被关闭等
+   */
+  public readonly useCompleted = (fn?:(res?:string)=>void)=>{
+    let _fn = fn;
+    this.once('ready-to-show', ()=>{
+      _fn instanceof Function && _fn('show');
+      _fn = undefined;
+    });
+    this.once('close', ()=>{
+      _fn instanceof Function && _fn('close');
+      _fn = undefined;
+    })
+    if(this.isLoaded){
+      _fn instanceof Function && _fn('loaded');
+      _fn = undefined;
+    }
   }
 }
 
@@ -699,12 +720,14 @@ class WindowManager {
       `窗口是否存在: ${!!win}`,
       win?.windowMode
     );
-    if (win) {
+    // 可能重复窗口的BUG - 登录为特殊窗口，必须在登录窗口一次性完成； 
+    if (win && module!==WindowModule.Login) {
       // 针对mac全屏切换窗口显示的优化处理
       if(process.platform === 'darwin' && !win.isVisible()){
         win.showAgain = true; 
       }
       win.show();
+      win.moveTop();
       return win;
     }
 

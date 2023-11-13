@@ -76,18 +76,11 @@ const createIpcChannel = () => {
     
     const win = WindowManager.create(WindowModule.Home);
     win.view(newUrl);
-    
-    if(win.isLoaded){
-      win.moveTop();
-      fromWin?.closeLoading();
-      return;
-    }
 
     return await new Promise((resolve) => {
-      win?.once('ready-to-show', () => {
-        Logger.info('[APP] ipcMain toHome', 'once:ready-to-show', '首页页面已准备就绪', url);
+      win.useCompleted((res)=>{
+        Logger.info('[APP] ipcMain toHome', 'win:useCompleted', `页面已经完成-[${res}]`, url);
         fromWin?.closeLoading();
-        win.moveTop();
         resolve(true);
       });
     });
@@ -104,16 +97,11 @@ const createIpcChannel = () => {
     fromWin?.showLoading();
 
     const win = WindowManager.create(WindowModule.Editor, appID);
-    if (win.isLoaded) {
-      fromWin?.closeLoading();
-      WindowManager.getWindow(WindowModule.Home)?.hide();
-      return true;
-    }
     win.view(url);
 
     return await new Promise((resolve) => {
-      win?.once('ready-to-show', () => {
-        Logger.info('[APP] ipcMain ToEditor', 'once:ready-to-show', '编辑页面已准备就绪', url);
+      win.useCompleted((res)=>{
+        Logger.info('[APP] ipcMain ToEditor', 'win:useCompleted', `页面已经完成-[${res}]`, url);
         fromWin?.closeLoading();
         WindowManager.getWindow(WindowModule.Home)?.hide();
         resolve(true);
@@ -132,16 +120,12 @@ const createIpcChannel = () => {
     fromWin?.showLoading();
 
     const win = WindowManager.create(WindowModule.Preview, appId);
-    if(win.isLoaded){
-      fromWin?.closeLoading();
-      return true;
-    }
     win.view(url);
 
     return await new Promise((resolve)=>{
-      win?.once('ready-to-show', ()=>{
+      win.useCompleted((res)=>{
+        Logger.info('[APP] ipcMain ToPreview', 'win:useCompleted', `页面已经完成-[${res}]`, url);
         fromWin?.closeLoading();
-        // WindowManager.getWindow(WindowModule.Home)?.hide();
         resolve(true);
       });
     });
