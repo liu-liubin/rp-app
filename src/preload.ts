@@ -3,7 +3,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { ChannelTypes } from './constants/enum';
 import { PRODUCT_AUTHOR } from './constants';
 
-console.info('⚠️当前环境变量为：' , process.env);
 const [, paramsStr] = window.location.href.split('?');
 const query: { [k: string]: string } = {};
 for (const [key, value] of new window.URLSearchParams(paramsStr).entries()) {
@@ -28,6 +27,7 @@ const cacheData: {
   env: process.env.web_env
 }
 
+process.env.DEBUG ==='true'  && console.info('⚠️当前环境变量为：' , process.env);
 
 const Bridge: MRPBridge = {
   startup: (auth) => ipcRenderer.invoke(ChannelTypes.StartupLoaded, auth),
@@ -53,7 +53,9 @@ const Bridge: MRPBridge = {
    * @param url
    * @returns
    */
-  toHome: (url?: string) => ipcRenderer.invoke(ChannelTypes.ToHome,process.env.windowId, url),
+  toHome: (url?: string|boolean) => ipcRenderer.invoke(ChannelTypes.ToHome,process.env.windowId, url),
+
+  toLink: (url:string) => ipcRenderer.invoke(ChannelTypes.ToLink, process.env.windowId , url),
   setWebStore: (k: string, value: unknown) => {
     // 临时存储 - web刷新消失
     cacheData.store.webStore = {
@@ -80,7 +82,7 @@ const Bridge: MRPBridge = {
   logout: () => ipcRenderer.send(ChannelTypes.Logout),
   close: () => ipcRenderer.invoke(ChannelTypes.Close, process.env.windowId),
   closeAll: () => ipcRenderer.send(ChannelTypes.CloseAll),
-  show: () => ipcRenderer.invoke(ChannelTypes.Show, process.env.windowId),
+  show: () => ipcRenderer.invoke(ChannelTypes.Show, process.env.windowId, window.location.hostname),
 
   hide: () => ipcRenderer.send(ChannelTypes.Close, process.env.windowId, false),
   hideAll: () => ipcRenderer.send(ChannelTypes.CloseAll, false),
@@ -131,7 +133,7 @@ const Bridge: MRPBridge = {
     if(!val){
       return;
     }
-    if(process.env.node_env === 'prod'){
+    if(process.env.DEBUG !=='true' ){
       console.log('当前不支持配置环境')
       return;
     }
@@ -147,9 +149,11 @@ const Bridge: MRPBridge = {
 
   relaunch: ()=> ipcRenderer.send(ChannelTypes.Relaunch),
 
-  delStore: () => { 
-    // 
-  } // store.delete(k as keyof IStore),
+  ...(process.env.DEBUG ==='true' ? {
+    getAppMetrics: ()=> ipcRenderer.sendSync(ChannelTypes.GetAppMetrics),
+    delStore: ()=>{ /** */ }
+  }: {}),
+  
 };
 
 contextBridge.exposeInMainWorld('MRPBridge', Bridge);

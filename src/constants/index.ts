@@ -5,8 +5,8 @@ export const ENT_RELEASE = process.argv.findIndex(v=>v==='ent')!==-1; // 是否�
 export const HOME_BROWSER_MIN_WIDTH = 500;
 export const HOME_BROWSER_MIN_HEIGHT = 350;
 
-export const BROWSER_DEFAULT_WIDTH = 1180;
-export const BROWSER_DEFAULT_HEIGHT = 750;
+export const BROWSER_DEFAULT_WIDTH = 1260;
+export const BROWSER_DEFAULT_HEIGHT = 760;
 
 export const LOADING_WINDOW_WIDTH = 96;
 export const LOADING_WINDOW_HEIGHT = 96;
@@ -18,3 +18,6 @@ export const PRODUCT_AUTHOR = 'Mockplus Technology Co.,Ltd.';
 export const PRODUCT_NAME = packageJson.productName;
 export const APPID = packageJson.appId;
 export const APP_NAME = packageJson.name;
+export const APP_VERSION = packageJson.version;
+export const APP_TYPE = packageJson.appType;
+export const PACKAGE_JSON = packageJson;

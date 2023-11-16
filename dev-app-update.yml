@@ -1,2 +1,2 @@
 provider: generic
-url: http://192.168.0.144:8000/
+url: https://demoidocapi.mockplus.cn/v1/openapi/file/electron/update/

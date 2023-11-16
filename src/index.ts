@@ -1,10 +1,10 @@
 import path from 'path';
-import { app, ipcMain, nativeImage, Tray, Menu } from 'electron';
+import { app, ipcMain, nativeImage, Tray, Menu, session } from 'electron';
 import store from './store';
 import { ChannelTypes } from './constants/enum';
 import WindowManager, { StartupBrowser, WindowModule } from './browser';
 import Logger from './logger';
-import { PRODUCT_AUTHOR, PRODUCT_NAME } from './constants';
+import { APP_TYPE, PRODUCT_AUTHOR, PRODUCT_NAME } from './constants';
 import AppUpdater from './AppUpdater';
 
 if (require('electron-squirrel-startup')) {
@@ -14,17 +14,31 @@ if (require('electron-squirrel-startup')) {
 Logger.logPath = path.resolve(app.getPath("userData"), 'Logs');
 
 Logger.info('******************************************************');
-Logger.info('*********************应用启动中************************');
+Logger.info(`******************应用启动中*${APP_TYPE}*********************`);
 Logger.info('******************************************************');
 Logger.info(`安装目录：${app.getAppPath()} `);
 Logger.info(`用户目录：${app.getPath('userData')}`);
 
-if(process.argv.find(v=>v==='prod')){
+process.traceProcessWarnings = false;
+
+// 清空旧版数据，使用新版数据结构
+if(store.get('name')!=='mockplus-rp'){
+  store.clear();
+  store.set('name', 'mockplus-rp');
+}
+
+// ？ 可能被命令行启动理工学改变？
+if(APP_TYPE === 'prod'){
   process.env.node_env = 'prod';
   store.set('env', 'prod');
-  store.set('debug', false);
+  if(process.env.DEBUG === 'true'){
+    store.set('debug', true);
+  }else{
+    store.set('debug', false);
+  }
 }else{
   process.env.node_env = 'test';
+  process.env.DEBUG = 'true';
 }
 
 let startupBrowser: StartupBrowser;
@@ -56,8 +70,8 @@ const createIpcChannel = () => {
   });
 
   // 跳转 - 到项目首页
-  ipcMain.handle(ChannelTypes.ToHome, async (e, windowId, url?: string) => {
-    if (url) {
+  ipcMain.handle(ChannelTypes.ToHome, async (e, windowId, url?: string|boolean) => {
+    if (typeof url === 'string') {
       store.set('envConfig', {
         ...store.get('envConfig'),
         home: url,
@@ -71,11 +85,18 @@ const createIpcChannel = () => {
       Logger.info('[CommonBrowser -> view]', 'url为空, 无法加载');
       return;
     }
+
+    const win = WindowManager.create(WindowModule.Home);
+
+    if(url === true){
+      win.reload();
+      return;
+    }
+
     const fromWin = WindowManager.fromId(windowId);
     fromWin?.showLoading();
     
-    const win = WindowManager.create(WindowModule.Home);
-    win.view(newUrl);
+    url ? win.reload(url) : win.view(newUrl);
 
     return await new Promise((resolve) => {
       win.useCompleted((res)=>{
@@ -131,6 +152,22 @@ const createIpcChannel = () => {
     });
   });
 
+  // 跳转 - 本地跳转location.href作用
+  ipcMain.handle(ChannelTypes.ToLink, async (e, windowId, url?: string) => {
+    Logger.info('[CommonBrowser -> view] ipcMain:handel ToLink', url);
+    const win = WindowManager.fromId(windowId);
+    if(url && url.startsWith('http') && win){
+      win.reload(url);
+      return await new Promise((resolve)=>{
+        win.useCompleted(()=>{
+          resolve(true);
+        });
+      });
+    }
+
+    return false;
+  });
+
   ipcMain.handle(ChannelTypes.CapturePage, async (e, windowId) => {
     const win = WindowManager.fromId(windowId);
     Logger.info('[APP] ipcMain CapturePage', '捕获页面存为图片', `页面是否存在：${!!win}`);
@@ -151,14 +188,17 @@ const createIpcChannel = () => {
     return true;
   });
 
-  ipcMain.handle(ChannelTypes.Show, async (e, windowId: string) => {
+  ipcMain.handle(ChannelTypes.Show, async (e, windowId: string, hostname:string) => {
     const currWindow = WindowManager.fromId(windowId);
-    Logger.info('[APP] ipcMain:handle Show', !currWindow ? `窗口不存在` : `显示当前窗口: ${currWindow?.title}-${currWindow?.moduleName}`);
+    Logger.info('[APP] ipcMain:handle Show', !currWindow ? `窗口不存在` : `显示当前窗口: ${currWindow?.title}-${currWindow?.moduleName}`, `窗口销毁：${currWindow?.isDestroyed()}`, `host: ${hostname}`);
     if (currWindow?.isDestroyed()) {
       return true;
     }
-    currWindow?.show();
-    currWindow?.moveTop();
+    if(currWindow){
+      currWindow.hostname = hostname;
+      currWindow.show();
+      currWindow.moveTop();
+    }
     return true;
   });
 
@@ -178,7 +218,7 @@ const createIpcChannel = () => {
   });
 
   ipcMain.on(ChannelTypes.StartAutoUpdater, (e, url, headers, auth)=>{
-    Logger.info('[APP] ipcMain:on StartAutoUpdater', `启动自动更新检查: ${url}-${headers}-${auth}`);
+    Logger.info('[APP] ipcMain:on StartAutoUpdater', `启动自动更新检查: 【${url}】- 【${JSON.stringify(headers)}】-${auth}`);
     const updater = new AppUpdater();
     updater.checkUpdate({url, headers, auth});
   })  
@@ -284,8 +324,19 @@ const createIpcChannel = () => {
     store.set(k, data);
   });
 
-  ipcMain.on(ChannelTypes.SetWebEnv, (e, val)=>{
+  ipcMain.on(ChannelTypes.SetWebEnv, (e, val, reluanch)=>{
     store.set('env', val);
+    if(reluanch){
+      store.set('webStore', {});
+      app.quit();
+      app.relaunch();
+      app.exit(0);
+    }
+  });
+
+  ipcMain.on(ChannelTypes.GetAppMetrics, (e)=>{
+    // return app.getAppMetrics();
+    e.returnValue = app.getAppMetrics();
   })
 
 };
@@ -302,9 +353,7 @@ const createTray = ()=>{
         type: 'radio',
         checked: store.get('env') === 'dev',
         click(){
-          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'dev');
-          app.relaunch();
-          app.quit();
+          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'dev', true);
         },
       },
       { 
@@ -312,9 +361,7 @@ const createTray = ()=>{
         type: 'radio',
         checked: store.get('env') === 'test',
         click(){
-          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'test');
-          app.relaunch();
-          app.quit();
+          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'test', true);
         },
       },
       { 
@@ -322,9 +369,7 @@ const createTray = ()=>{
         type: 'radio',
         checked: store.get('env') === 'demo',
         click(){
-          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'demo');
-          app.relaunch();
-          app.quit();
+          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'demo', true);
         },
       },
       { 
@@ -332,9 +377,7 @@ const createTray = ()=>{
         type: 'radio',
         checked: store.get('env') === 'prod',
         click(){
-          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'prod');
-          app.relaunch();
-          app.quit();
+          ipcMain.emit(ChannelTypes.SetWebEnv, Event, 'prod', true);
         },
       }
     ] },
@@ -346,7 +389,7 @@ const createTray = ()=>{
       ipcMain.emit(ChannelTypes.ResetStore);
     } },
     { label: '', type: 'separator' },
-    { label: '退出', type: 'normal', click(){ app.quit(); } },
+    { label: '退出', type: 'normal', click(){ app.exit(0); app.quit(); } },
   ])
   const iconFile = process.platform==='darwin' ? 'images/icons/tray-iconMac.png' :  'images/icons/tray-icon.png';
   const icon = nativeImage.createFromPath(path.resolve(__dirname,  iconFile));
@@ -370,6 +413,29 @@ const createTray = ()=>{
   });
 }
 
+const singleRunApp = ()=>{
+  if(!app.isPackaged){
+    return  false;
+  }
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.quit();
+  } else {
+    app.on('second-instance', (event, commandLine, workingDirectory, additionalData) => {
+      // 输出从第二个实例中接收到的数据
+      Logger.info('[APP] 有第二个实例正在尝试创建', additionalData);
+      // 有人试图运行第二个实例，我们应该关注我们的窗口
+      const win = WindowManager.getFocusWindow();
+      if (win) {
+        if (win.isMinimized()){ 
+          win.restore();
+        }
+        win.focus()
+      }
+    })
+  }
+}
+
 app.setAboutPanelOptions({
   applicationName: app.getName(),
   applicationVersion: app.getVersion(),
@@ -377,6 +443,7 @@ app.setAboutPanelOptions({
   copyright: PRODUCT_AUTHOR,
   iconPath: './assets/images/logo.png',
 });
+
 
 app.on('render-process-gone', (e, webContents, details)=>{
   Logger.info('[APP] 渲染进程发生意外', webContents.getURL(), details);
@@ -387,7 +454,24 @@ app.on('child-process-gone', (e, details)=>{
   app.quit();
 });
 
+singleRunApp();
+
 app.on('ready', () => {  
+  // session.defaultSession.webRequest.onBeforeSendHeaders(
+  //   (
+  //     details: Electron.OnBeforeSendHeadersListenerDetails,
+  //     cb
+  //   ) => {
+  //     cb({ requestHeaders: details.requestHeaders });
+  //   }
+  // );
+
+  session.defaultSession.webRequest.onCompleted({urls:[]}, (details)=>{
+    if(details.resourceType === 'xhr'){
+      process.env.CATCH_NET && Logger.network(details);
+    }
+  })
+
   createIpcChannel();
 
   createTray();

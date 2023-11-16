@@ -48,11 +48,14 @@ class CommonBrowser extends BrowserWindow {
   public showAgain = false; 
   /** 状态转变事件为webContents.dom-ready view是否加载了url；加载过则不再重新加载； 需要重新加载使用reload */
   public isLoaded = false;
+  /** 调用 ChannelTypes.Show 时设置当前窗口的主机名称 */
+  public hostname = '';
 
   constructor(options: Options = {}) {
     super({
       title: '摹客RP',
       titleBarStyle: 'hiddenInset',
+      trafficLightPosition: {x: 8, y: 5},
       ...options,
       frame: false,
       show: false,
@@ -61,6 +64,7 @@ class CommonBrowser extends BrowserWindow {
         nodeIntegration: true,
         preload: MAIN_APP_PRELOAD_WEBPACK_ENTRY,
       },
+      paintWhenInitiallyHidden: false,  // 设置为false页面可见不再触发ready-to-sho，只有手动调用win.show时触发ready-to-show
     });
 
     this._hide = super.hide;
@@ -89,6 +93,9 @@ class CommonBrowser extends BrowserWindow {
   view(url: string, opts: LoadContentOptions = {}):boolean {
     if(this.isLoaded){
       Logger.info('[CommonBrowser -> view|load]', `【${this.moduleName}】模块窗口已经载入过！！！`);
+      if(this.webContents.getURL().indexOf(url) === -1){
+        this.reload(url, opts);
+      }
       return false;
     }
     this.url = url;
@@ -127,10 +134,11 @@ class CommonBrowser extends BrowserWindow {
    * @return boolean 返回false表示窗口存在并载入了url
    */
   reload(url?:string, query: LoadContentOptions = {}): void {
+    Logger.info('[CommonBrowser -> reload', `【${this.moduleName}】重载页面`, url, this.isLoaded);
+    this.isLoaded = false;
     if(!url){
       this.webContents.reload()
     }else{
-      this.isLoaded = false;
       this.view(url, query);
     }
   }
@@ -186,8 +194,10 @@ class CommonBrowser extends BrowserWindow {
 
     Logger.info('[CommonBrowser -> showLoading', `【${this.moduleName}】显示loading`);
 
-    this.loadingBrowserView  = new LoadingBrowserView()
-    this.addBrowserView(this.loadingBrowserView );
+    if(!this.loadingBrowserView){
+      this.loadingBrowserView  = new LoadingBrowserView();
+    }
+    this.setBrowserView(this.loadingBrowserView );
     this.setTopBrowserView(this.loadingBrowserView );
     this.loadingBrowserView .setAutoResize({
       width: true,
@@ -234,7 +244,7 @@ class CommonBrowser extends BrowserWindow {
       return;
     }
     Logger.info('[CommonBrowser -> closeLoading', `【${this.moduleName}】关闭loading`);
-    this.loadingBrowserView  && this.removeBrowserView(this.loadingBrowserView );
+    this.loadingBrowserView  && this.loadingBrowserView.setBounds({x:0, y: 0, width:0, height: 0});
     // this.webContents.executeJavaScript(`
     // document.body.removeChild(document.getElementById('__rp_inject_wrapper'));
     // `, true).catch(()=>{
@@ -280,17 +290,22 @@ class CommonBrowser extends BrowserWindow {
       }
     });
 
+    /** 载入地址失败触发 （包含所有iframe的加载） */
     webContents.on('did-fail-load', (e, ...args: unknown[]) => {
-      const [, , url] = args;
+      const [, , url, isMainFrame] = args;
       Logger.info(
         '[CommonBrowser -> initContentsEvent] did-fail-load',
         `【${this.moduleName}】`,
-        `页面错误/崩溃地址：${url}`
+        `页面错误/崩溃地址：${url}`,
+        `是否为主框架：${isMainFrame}`
       );
       if (HTML_ERROR_CRASH_WEBPACK_ENTRY === url || !url) {
         return;
       }
       if(url && (url as string).indexOf(HTML_ERROR_CRASH_WEBPACK_ENTRY) !== -1){
+        return;
+      }
+      if(!isMainFrame){
         return;
       }
       // 如果是发生在启动页面，则需关闭启动Loading
@@ -336,6 +351,13 @@ class CommonBrowser extends BrowserWindow {
         `url:${url} errorCode: ${error} certificate: ${certificate}`,
       );
     });
+
+    webContents.on('will-navigate', (details)=>{
+      Logger.info('[CommonBrowser -> initContentsEvent] will-navigate', this.hostname, details.url);
+      if(details.isMainFrame && details.url.startsWith('http') && details.url.indexOf(this.hostname)===-1){
+        details.preventDefault();
+      }
+    })
 
     const defaultUserAgent =  process.platform === 'darwin' ? MAC_OS_CHROME_USER_AGENT : WINDOW_CHROME_USER_AGENT;
     const userAgent = webContents.getUserAgent() || defaultUserAgent;
@@ -391,10 +413,7 @@ class CommonBrowser extends BrowserWindow {
     this.on('move', () => {
       // Logger.info('[CommonBrowser -> initBrowserEvent]', 'on:resize');
       this.bounds = this.getNormalBounds();
-      memoryCache.displayCenterPosition = {
-        x: this.bounds.x + Math.round(this.bounds.width/2),
-        y: this.bounds.y + Math.round(this.bounds.height/2)
-      }
+      memoryCache.displayCursorPosition = screen.getCursorScreenPoint();
     });
 
     /** 系统窗口切换，最小化到恢复，都会触发该事件  */
@@ -408,12 +427,8 @@ class CommonBrowser extends BrowserWindow {
 
     /** 窗口获得焦点，创建窗口显示时也会触发 */
     this.on('focus', () => {
-      const {x, y, width, height} = this.getNormalBounds();
-      memoryCache.displayCenterPosition = {
-        x: x + Math.round(width/2),
-        y: y + Math.round(height/2)
-      }
-      Logger.debug('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus', memoryCache.displayCenterPosition);
+      memoryCache.displayCursorPosition = screen.getCursorScreenPoint(),
+      Logger.info('[CommonBrowser -> initBrowserEvent]', `【${this.moduleName}】` ,'on:focus', memoryCache.displayCursorPosition);
     });
 
     this.on('unresponsive', ()=>{
@@ -474,6 +489,7 @@ class CommonBrowser extends BrowserWindow {
           ...store.get('windowBounds'),
           [`${this.moduleName}`]: this.bounds,
         });
+        memoryCache.displayCursorPosition = {x:0, y:0}
       }
 
       WindowManager.removeWindow(this.moduleName, this.tag);
@@ -481,6 +497,7 @@ class CommonBrowser extends BrowserWindow {
     });
   }
 
+  /**暂未启用 */
   private createViewWindow(url: string) {
     Logger.warn('[CommonBrowser -> createViewWindow]', `【${this.moduleName}】创建视图窗口: ${url}`);
 
@@ -518,6 +535,10 @@ class CommonBrowser extends BrowserWindow {
    */
   public readonly useCompleted = (fn?:(res?:string)=>void)=>{
     let _fn = fn;
+    if(this.isLoaded){
+      _fn instanceof Function && _fn('loaded');
+      _fn = undefined;
+    }
     this.once('ready-to-show', ()=>{
       _fn instanceof Function && _fn('show');
       _fn = undefined;
@@ -526,10 +547,6 @@ class CommonBrowser extends BrowserWindow {
       _fn instanceof Function && _fn('close');
       _fn = undefined;
     })
-    if(this.isLoaded){
-      _fn instanceof Function && _fn('loaded');
-      _fn = undefined;
-    }
   }
 }
 
@@ -537,13 +554,13 @@ class LoginBrowser extends CommonBrowser {
   moduleName = WindowModule.Login;
   constructor(options: Options = {}) {
     super({
-      width: 450,
-      height: 600,
       resizable: false,
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
       ...options,
+      width: 450,
+      height: 600,
       show: false,
       trafficLightPosition: { x: -20, y: -20 },
     });
@@ -620,7 +637,8 @@ class PreviewBrowser extends CommonBrowser {
       minHeight: HOME_BROWSER_MIN_HEIGHT,
       ...options,
     });
-    this.maximize();
+    // this.maximize();
+    // process.env.windowMode = 'maximize';
     // this.once('ready-to-show', () => {
     //   this.maximize();
     // });
@@ -714,52 +732,68 @@ class WindowManager {
   static create(module: WindowModule, tag = MAIN_TAG_NAME, options: Options = {}): CommonBrowser {
     let win: CommonBrowser | undefined = undefined;
     win = this.getWindow(module, tag);
-    Logger.warn(
-      '[WindowManager -> create]',
-      `【${module}-${tag}】`,
-      `窗口是否存在: ${!!win}`,
-      win?.windowMode
-    );
+    
     // 可能重复窗口的BUG - 登录为特殊窗口，必须在登录窗口一次性完成； 
     if (win && module!==WindowModule.Login) {
+      Logger.info(
+        '[WindowManager -> create]',
+        `【${module}-[${tag}]】`,
+        `窗口已被创建`,
+        win?.windowMode
+      );
       // 针对mac全屏切换窗口显示的优化处理
       if(process.platform === 'darwin' && !win.isVisible()){
         win.showAgain = true; 
       }
       win.show();
       win.moveTop();
+      win.focus();
       return win;
     }
 
     const extraDisplay = WindowManager.getExtraWindow();
-    const primaryDisplay =  screen.getPrimaryDisplay();
-    
+    const primaryDisplayBounds =  screen.getPrimaryDisplay().bounds;
     const winBounds = store.get('windowBounds')[module];
+   
     if(winBounds){
       Object.assign(options, winBounds);
-    }
-    // 存在外接屏幕
-    if(extraDisplay){
-      const xIsExtraFocus = extraDisplay.bounds.x > primaryDisplay.bounds.x && memoryCache.displayCenterPosition.x > extraDisplay.bounds.x;
-      const yIsExtraFocus = extraDisplay.bounds.y > primaryDisplay.bounds.y && memoryCache.displayCenterPosition.y > extraDisplay.bounds.y
-      if(xIsExtraFocus || yIsExtraFocus){
-        Object.assign(options, {
-          x: extraDisplay.bounds.x,
-          y: extraDisplay.bounds.y,
-        })
-      }else{
-        // delete options.x;
-        // delete options.y;
-      }
     }else{
-      // 窗口的屏幕外，强制设置为0
-      const xOverflow = options.x && options.x > screen.getPrimaryDisplay().bounds.width;
-      const yOverflow = options.y && options.y > screen.getPrimaryDisplay().bounds.height;
+      Object.assign(options, {
+        width: BROWSER_DEFAULT_WIDTH,  //Math.round(primaryDisplayBounds.width * 0.8),
+        height: BROWSER_DEFAULT_HEIGHT //Math.round(primaryDisplayBounds.height * 0.8)
+      })
+    }
+
+    // 首次启用软件 或者单个屏幕 使用记忆位置 
+    if (!extraDisplay){
+      // 窗口的屏幕外，强制设置为0 - 通常由于外接显示导致
+      const xOverflow = options.x && options.x > screen.getPrimaryDisplay().bounds.width - 50;
+      const yOverflow = options.y && options.y > screen.getPrimaryDisplay().bounds.height - 50;
       if(xOverflow || yOverflow){
-        options.x = 0;
-        options.y = 0;
+        options.x = 30;
+        options.y = 30;
       }
-    }    
+    }else{ // 双屏
+        const xIsExtraFocus = memoryCache.displayCursorPosition && memoryCache.displayCursorPosition.x > extraDisplay.bounds.x;
+        const yIsExtraFocus = memoryCache.displayCursorPosition && memoryCache.displayCursorPosition.y > extraDisplay.bounds.y;
+
+        // 判断记忆位置既不在主屏也不在副屏范围内
+        if( options.x && options.x < primaryDisplayBounds.width && options.y && options.y < primaryDisplayBounds.height){
+          /** */
+        }else if(options.x && options.x < (extraDisplay.bounds.x+extraDisplay.bounds.width) && options.y && options.y < (extraDisplay.bounds.y+extraDisplay.bounds.height)){
+          /** */
+        }else{
+          if(xIsExtraFocus && yIsExtraFocus){    
+              Object.assign(options, {
+                x: extraDisplay.bounds.x + 30,
+                y: extraDisplay.bounds.y + 30,
+              });
+          }else{
+            delete options.x;
+            delete options.y;
+          }
+        }
+    } 
 
     if (module === WindowModule.Login) {
       win = new LoginBrowser(options);
@@ -781,6 +815,16 @@ class WindowManager {
     }
     this.windowTagMap.get(module)?.set(tag, win);
     this.windowMap.set(`${win.id}`, win);
+
+    Logger.info(
+      '[WindowManager -> create]',
+      `【${module}-[${tag}]】`,
+      `新建窗口:`,win.getBounds(),
+      `主屏大小: width: ${primaryDisplayBounds.width};height: ${primaryDisplayBounds.height}`,
+      `焦点位置: x: ${memoryCache.displayCursorPosition?.x}; y: ${memoryCache.displayCursorPosition?.y}`,
+      `窗口记忆: x: ${options.x};y: ${options.y}`,
+      extraDisplay? `外接：x: ${extraDisplay.bounds.x}; y: ${extraDisplay.bounds.y}` : ''
+    );
     return win;
   }
 

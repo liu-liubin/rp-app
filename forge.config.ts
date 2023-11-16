@@ -11,20 +11,20 @@ import {Configuration, build } from "electron-builder"; // 由于使用fore打�
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
-import {APPID, APP_NAME, PRODUCT_NAME} from './src/constants';
+import {APPID, APP_NAME, PRODUCT_NAME, APP_VERSION} from './src/constants';
 
 const builderOptions: Configuration = {
   "appId": APPID,
   "productName": PRODUCT_NAME,
   "executableName": APP_NAME,
   "generateUpdatesFilesForAllChannels": true,
-  "artifactName": '${productName}-${arch}.${ext}', // 生成的包名 - 不可带路径
+  "artifactName": '${name}_${arch}_${version}.${ext}', // 生成的包名 - 不可带路径
   "electronDownload": {
     "mirror": "https://npm.taobao.org/mirrors/electron/"
   },
   "files": [".webpack/**/*"],
   "directories":{
-    "output": "out/builder/${os}/${version}",
+    "output": `out/builder/${process.platform}/${APP_VERSION}`,
     "buildResources": "installer/resources"
   },
   "win": {
@@ -32,7 +32,7 @@ const builderOptions: Configuration = {
     "signingHashAlgorithms": ["sha256"], // 签名文件需指定
     // "certificateFile": "./cert/mockplus.pfx",  // 当 CSC_LINK (WIN_CSC_LINK) 变量无法使用时用它
     // "certificatePassword": "Jongde@61367719",
-    "verifyUpdateCodeSignature": true,
+    // "verifyUpdateCodeSignature": true,
     "target": [
       {
         "target": "nsis",
@@ -45,6 +45,7 @@ const builderOptions: Configuration = {
   },
   "nsis": {
     "oneClick": false,
+    "perMachine": false,
     "allowElevation": true,
     "allowToChangeInstallationDirectory": true,
     "installerIcon": "./src/assets/icons/icon.ico",
@@ -57,24 +58,34 @@ const builderOptions: Configuration = {
   "mac": {
     "icon": "./src/assets/icons/icon.png",
     "category": "public.app-category.graphics-design",
+    "identity": "Liu Song (7PZMT8T5KL)",
+    "hardenedRuntime": true,
     "target": [
       {
         "target": "dmg",
         "arch": ["arm64", "x64"],
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64", "x64"],
       }
-    ]
+    ],
+    "notarize" : {
+      "appBundleId": APPID,
+      "teamId": "7PZMT8T5KL"
+    }
   },
   "dmg": {
     "backgroundColor": "#f2f2f2", // 安装窗口背景色
     "contents": [
       {
         x: 20,
-        y: 60,
+        y: 90,
         type: "file"
       },
       {
         x: 220,
-        y: 60,
+        y: 90,
         type: "link",
         path: "/Applications"
       }
@@ -85,7 +96,7 @@ const builderOptions: Configuration = {
     },
     "icon": "./src/assets/icons/icon.png",
     "format": "ULFO", // 硬盘图片格式
-    "sign": false
+    "sign": true
   },
   "linux": {
     "icon": '',

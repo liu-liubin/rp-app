@@ -26,6 +26,13 @@ class Logger {
     Log.transports.file.fileName = 'debug.log';
     debug(...params);
   }
+  static network(...params: Array<unknown>): void {
+    if(!store.get('debug')){
+      return;
+    }
+    Log.transports.file.fileName = 'network.log';
+    debug(...params);
+  }
   static runtime(...params: Array<unknown>){
     Log.transports.file.fileName = 'runtime.log';
     info(...params);

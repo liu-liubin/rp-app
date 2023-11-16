@@ -19,6 +19,9 @@ declare namespace NodeJS {
       store: string;
       web_env: string;
       node_env: 'prod' | 'test';
+      CLOSE_AUTO_UPGRADE?: 'true' | 'false'; // 命令行注入
+      DEBUG?: 'true'|'false';
+      CATCH_NET?: 'true' | 'false';
     }
   }
 }
@@ -32,6 +35,7 @@ declare interface EnvConfig {
 
 declare interface StoreConfig {
   lang: string;
+  name: string,
   browserOption?: Electron.BrowserWindowConstructorOptions;
   version?: string;  // 安装版本，如果版本更新，则此值在安装并启动应用时更新该值
   env: string;
@@ -69,9 +73,11 @@ declare interface MRPBridge {
    * 跳转到RP首页, 设置url， url为空则加载上一次所设置的url窗口 
    * Promise返回将发生在ready-to-show事件里
    */
-  toHome: (url?: string) => Promise<unknown>;
+  toHome: (url?: string|boolean) => Promise<unknown>;
   toEditor: (url: string, appID?: string) => Promise<unknown>; // 跳转到RP编辑页
   toPreview: (url: string, appID?: string) => Promise<unknown>; // 跳转到RP预览页
+  /** 本机跳转 - location.href作用，可直接跳转到外部链接, 以http开头 */
+  toLink: (url: string) => Promise<unknown>; 
 
   setWebStore: (k: string, value: unknown, fn?: (res: { [k: string]: unknown }) => void) => void; // 设置本地缓存数据
   getWebStore: (k: string) => unknown; // 获取本地缓存数据
@@ -127,7 +133,8 @@ declare interface MRPBridge {
   query: { [k: string]: string };
 
   relaunch: ()=> void;
-  delStore: (k: string) => void; // 删除某一个配置缓存，生产环境不可用
+  delStore?: (k: string) => void;  // 仅研发测试包可用 - 删除某一个配置缓存
+  getAppMetrics?: ()=>void; // 仅研发测试包可用
 }
 
 

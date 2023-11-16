@@ -9,6 +9,7 @@ export enum ChannelTypes {
     ToEditor = 'toEditor', // 
     ToHome = 'toHome', // 打开项目首页窗口
     ToLogin = 'toLogin',
+    ToLink = 'toLink',
 
     Logout = 'logout',
     Close = 'close',
@@ -42,6 +43,8 @@ export enum ChannelTypes {
     GetTabViews = 'on:getTabViews',
     UpdateWindowMode = 'on:updateWindowMode',
     SetPageFailed = 'on:SetPageFailed',
+
+    GetAppMetrics = 'dev:getAppMetrics'
 }
 
 export enum MainChannelTypes{

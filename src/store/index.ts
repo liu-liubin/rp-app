@@ -14,18 +14,19 @@ export interface IMemoryCache{
   windowMode: {
     [k: string]: 'minimize'|'maximize'|'fullscreen'|'normal'
   };
-  displayCenterPosition: {
+  displayCursorPosition?: {
     x: number;
-    y:number;
+    y: number;
   }
 }
 
 const store = new Store<StoreConfig>({
     defaults: {
         lang: 'zh_CN',
+        name: '',
         browserOption: { },
         webStore: {},
-        env: 'dev',
+        env: 'dev',  // 网页端使用
         debug: true,
         envConfig: {
           // domain: 'http://192.168.0.81:3004',
@@ -37,7 +38,7 @@ const store = new Store<StoreConfig>({
 export const memoryCache:IMemoryCache = {
   tabViews: {},
   windowMode: {},
-  displayCenterPosition: {x:0, y: 0}
+  displayCursorPosition: undefined
 };
 
 export default store;
