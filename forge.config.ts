@@ -13,6 +13,8 @@ import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 import {APPID, APP_NAME, PRODUCT_NAME, APP_VERSION} from './src/constants';
 
+import { notarize } from 'electron-notarize';
+
 const builderOptions: Configuration = {
   "appId": APPID,
   "productName": PRODUCT_NAME,
@@ -26,6 +28,26 @@ const builderOptions: Configuration = {
   "directories":{
     "output": `out/builder/${process.platform}/${APP_VERSION}`,
     "buildResources": "installer/resources"
+  },
+  afterSign: async (context) => {
+    const { electronPlatformName, appOutDir } = context; 
+    if (electronPlatformName !== 'darwin') {
+      return;
+    }
+
+    console.log('notarizing...');
+  
+    const appName = context.packager.appInfo.productFilename;
+  
+    return await notarize({
+      appBundleId: APPID,
+      appPath: `${appOutDir}/${appName}.app`,
+      appleId: 'jongde.com@gmail.com',
+      appleIdPassword: 'rggl-xqaj-dpti-xzwa',
+    }).catch(e => {
+      console.log(e);
+      throw e;
+    });
   },
   "win": {
     "icon": "./src/assets/icons/icon.ico",

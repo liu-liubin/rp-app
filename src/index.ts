@@ -474,7 +474,7 @@ app.on('ready', () => {
 
   createIpcChannel();
 
-  createTray();
+  process.env.node_env !== 'prod' && createTray();
 
   startupBrowser = new StartupBrowser();
   startupBrowser.on('ready-to-show', () => {
